@@ -1,0 +1,746 @@
+#include "YTManage.h"
+#include "deepbrain_app.h"
+
+#include "Memory_interface.h"
+#include "userconfig.h"
+#include "dcl_tts_api.h"
+#include "dcl_interface.h"
+#include "dcl_asr_api.h"
+#include "dcl_service.h"
+#include "dcl_nlp_decode.h"
+#include "dcl_volume_decode.h"
+#include "dcl_mpush_push_msg.h"
+
+#include "asr_service.h"
+#include "wifi_manage.h"
+#include "debug_log_interface.h"
+#include "events.h"
+#include "duer_recorder.h"
+#include "yt_key.h"
+#include "audio.h"
+#include "change_voice.h"
+//#include "YTDebug.h"
+
+namespace deepbrain {
+//static ASR_RESULT_t asr_result = {0};
+//static NLP_RESULT_T nlp_result = {0};
+#define LOG_TAG "DCL MAIN" 
+
+//#define AMRNB_ENCODE_FRAME_MS	20
+#define AMRNB_ENCODE_IN_BUFF_SIZE 640
+//#define AMRNB_ENCODE_OUT_BUFF_SIZE (AMRNB_ENCODE_IN_BUFF_SIZE/10)
+
+//#define WECHAT_MAX_RECORD_MS	(10*1000)
+#define AMR_MAX_AUDIO_SIZE  AMRNB_ENCODE_IN_BUFF_SIZE*16 + 9//(WECHAT_MAX_RECORD_MS*AMRNB_ENCODE_OUT_BUFF_SIZE/20 + 9)
+
+static duer::YTGpadcKey s_talk_button(KEY_B0);
+static duer::YTGpadcKey s_mode_button(KEY_B1);
+static duer::YTGpadcKey s_pig_button(KEY_B2);
+
+
+
+//static duer::YTGpadcKey s_button(KEY_B0);
+//static duer::YTGpadcKey s_mchat_button(KEY_B1);
+//static duer::YTGpadcKey s_magic_button(KEY_B2);
+
+static duer::YTGpadcKey s_wifi_button(KEY_B4);
+
+static int record_sn;		//录音序列号
+static int record_id;		//录音索引
+
+static char *amrnb_data;	//amrnb录音
+static int amrnb_data_len;	//amrnb录音
+
+static int dcl_next_mode;
+static int dcl_mode;
+static const char amr_head[] =  "#!AMR\n";
+
+#if 0
+//获取文本播放URL
+bool get_tts_play_url(
+	const char* const input_text, 
+	char* const tts_url, 
+	const uint32_t url_len)
+{
+	DCL_AUTH_PARAMS_t input_params = {0};
+	get_dcl_auth_params(&input_params);
+	
+	if (dcl_get_tts_url(&input_params, input_text, tts_url, url_len) == DCL_ERROR_CODE_OK)
+	{
+		//DEBUG_LOGI(TAG_LOG, "ttsurl:[%s]", tts_url);
+		return true;
+	}
+	else
+	{
+		DEBUG_LOGE(LOG_TAG, "dcl_get_tts_url failed");
+		return false;
+	}
+}
+#endif
+
+bool yt_dcl_process_stop_chat(NLP_RESULT_T *nlp_result)
+{
+	char stop_txt1[] = "再见";
+	short *txt = (short*)nlp_result->input_text;	
+	short *dst_txt = (short*)stop_txt1;
+	DEBUG_LOGI(LOG_TAG, "input_text[0]:%x %x",txt[0], txt[1]);
+	DEBUG_LOGI(LOG_TAG, "input_text[0]:%x %x",dst_txt[0], dst_txt[1]);
+	
+//	if (strcmp(nlp_result->input_text ,stop_txt1 ,sizeof(stop_txt1)) == 0)
+//		|| memncmp({,} nlp_result->input_text)
+//		|| memncmp({,} nlp_result->input_text)
+//		|| memncmp({,} nlp_result->input_text))
+//	{
+//		return true;
+//	}
+
+	return false;
+}
+
+void yt_dcl_process_result(ASR_RESULT_t *asr_result)
+{
+	int i = 0;
+	static char no_text_times = 0;
+	
+	switch (asr_result->error_code)
+	{
+		case DCL_ERROR_CODE_OK: 	//成功
+		{
+			break;
+		}
+		case DCL_ERROR_CODE_FAIL:	//失败
+		case DCL_ERROR_CODE_SYS_INVALID_PARAMS: //无效参数
+		case DCL_ERROR_CODE_SYS_NOT_ENOUGH_MEM: //内存不足
+		{
+			//系统错误
+			//audio_play_tone_mem(FLASH_MUSIC_XI_TONG_CUO_WU, AUDIO_TERM_TYPE_NOW);
+			return;
+		}
+		//network error code
+		case DCL_ERROR_CODE_NETWORK_DNS_FAIL:	//网络DNS解析失败
+		{
+			//audio_play_tone_mem(FLASH_MUSIC_DNS_JIE_XI_SHI_BAI, AUDIO_TERM_TYPE_NOW);
+			return;
+		}
+		case DCL_ERROR_CODE_NETWORK_UNAVAILABLE://网络不可用
+		{	
+			//audio_play_tone_mem(FLASH_MUSIC_WANG_LUO_BU_KE_YONG, AUDIO_TERM_TYPE_NOW);
+			return;
+		}
+		case DCL_ERROR_CODE_NETWORK_POOR:		//网络信号差
+		{
+			//audio_play_tone_mem(FLASH_MUSIC_WANG_LUO_BU_JIA, AUDIO_TERM_TYPE_NOW);
+			return;
+		}
+
+		//server error
+		case DCL_ERROR_CODE_SERVER_ERROR:		//服务器端错误
+		{
+			//audio_play_tone_mem(FLASH_MUSIC_FU_WU_QI_CUO_WU, AUDIO_TERM_TYPE_NOW);
+			return;
+		}
+		//asr error code
+		case DCL_ERROR_CODE_ASR_SHORT_AUDIO:	//语音太短,小于1秒
+		{
+			//audio_play_tone_mem(FLASH_MUSIC_CHAT_SHORT_AUDIO, AUDIO_TERM_TYPE_NOW);
+			return;
+		}
+		case DCL_ERROR_CODE_ASR_ENCODE_FAIL:	//语音识别PCM数据编码失败
+		case DCL_ERROR_CODE_ASR_MAKE_PACK_FAIL: //语音识别组包失败	
+		{
+			//语音识别错误
+			//audio_play_tone_mem(FLASH_MUSIC_BIAN_MA_SHI_BAI, AUDIO_TERM_TYPE_NOW);
+			return;
+		}
+		default:
+			break;
+	}
+
+	NLP_RESULT_T *nlp_result = (NLP_RESULT_T*)memory_malloc(sizeof(NLP_RESULT_T));
+	if(nlp_result == NULL)
+	{
+		DEBUG_LOGE(LOG_TAG, "nlp_result malloc fail!!");
+		return;
+	}
+
+	memset(nlp_result, 0x00, sizeof(NLP_RESULT_T));
+
+	if (dcl_nlp_result_decode(asr_result->str_result, nlp_result) != NLP_DECODE_ERRNO_OK)
+	{
+		//to do something
+		//audio_play_tone_mem(FLASH_MUSIC_FU_WU_QI_CUO_WU, AUDIO_TERM_TYPE_NOW);
+		DEBUG_LOGE(LOG_TAG, "dcl_nlp_result_decode failed");
+		return;
+	}
+	DEBUG_LOGE(LOG_TAG, "nlp_result type:%d",nlp_result->type);
+
+	switch (nlp_result->type)
+	{
+		case NLP_RESULT_TYPE_NONE:
+		case NLP_RESULT_TYPE_ERROR:
+		{			
+			duer::YTMediaManager::instance().play_queue();
+			//audio_play_tone_mem(FLASH_MUSIC_TONE_AI_NO_SPEAK_02, AUDIO_TERM_TYPE_NOW);
+			break;
+		}
+		case NLP_RESULT_TYPE_NO_ASR:
+		{
+			duer::YTMediaManager::instance().play_queue();
+			//audio_play_tone_mem(FLASH_MUSIC_TONE_AI_NO_SPEAK_01, AUDIO_TERM_TYPE_NOW);
+			break;
+		}
+		case NLP_RESULT_TYPE_CHAT:
+		{
+			if(strlen(nlp_result->input_text) == 0)
+			{
+				no_text_times++;
+			}
+			
+			if(no_text_times <= 2 && !yt_dcl_process_stop_chat(nlp_result))
+			{
+				if (strlen(nlp_result->chat_result.link) > 0)
+				{				
+					duer::YTMediaManager::instance().clear_queue();
+					duer::YTMediaManager::instance().play_url(nlp_result->chat_result.link,duer::MEDIA_FLAG_URL_CHAT);
+				}
+				else
+				{
+					bool ret = get_tts_play_url(nlp_result->chat_result.text, (char*)nlp_result->chat_result.link, sizeof(nlp_result->chat_result.link));
+					if (!ret)
+					{
+						ret = get_tts_play_url(nlp_result->chat_result.text, (char*)nlp_result->chat_result.link, sizeof(nlp_result->chat_result.link));
+					}
+					
+					if (ret)
+					{					
+						duer::YTMediaManager::instance().clear_queue();
+						duer::YTMediaManager::instance().play_url(nlp_result->chat_result.link, duer::MEDIA_FLAG_URL_CHAT);
+					}
+					else
+					{
+						duer::YTMediaManager::instance().play_queue();
+						//audio_play_tone_mem(FLASH_MUSIC_NOT_HEAR_CLEARLY_PLEASE_REPEAT, AUDIO_TERM_TYPE_NOW);
+					}
+				}
+			}
+			else {
+				no_text_times = 0;
+			}
+
+			break;
+		}
+		case NLP_RESULT_TYPE_LINK:
+		{
+			NLP_RESULT_LINKS_T *links = &nlp_result->link_result;
+			DEBUG_LOGI(LOG_TAG, "p_links->link_size=[%d]", links->link_size);
+
+			if(links->link_size > 0)
+			{				
+				duer::YTMediaManager::instance().clear_queue();
+				if(strlen(links->link[0].name_tts_url) == 0) {
+					bool ret = get_tts_play_url(links->link[0].link_name, links->link[0].name_tts_url, sizeof(links->link[0].name_tts_url));
+					if (!ret)
+					{
+						bool ret = get_tts_play_url(links->link[0].link_name, links->link[0].name_tts_url, sizeof(links->link[0].name_tts_url));
+					}
+				}
+			}	
+			
+			for (i=0; i<links->link_size; i++)
+			{
+				duer::YTMediaManager::instance().set_url_to_queue(links->link[i].link_url, duer::MEDIA_FLAG_DCS_URL);
+			}
+
+
+			duer::YTMediaManager::instance().play_url(links->link[0].name_tts_url, duer::MEDIA_FLAG_SPEECH | duer::MEDIA_FLAG_SAVE_PREVIOUS);
+#if 0			
+			if(links->link_size > 0)
+			{
+				if(strlen(links->link[0].name_tts_url) == 0) {
+					bool ret = get_tts_play_url(links->link[0].link_name, links->link[0].name_tts_url, sizeof(links->link[0].name_tts_url));
+					if (!ret)
+					{
+						bool ret = get_tts_play_url(links->link[0].link_name, links->link[0].name_tts_url, sizeof(links->link[0].name_tts_url));
+					}
+					
+					if (ret) {							
+						duer::YTMediaManager::instance().set_url_to_media_queue(links->link[0].link_url, duer::MEDIA_FLAG_DCS_URL);
+						duer::YTMediaManager::instance().play_url(links->link[0].name_tts_url, duer::MEDIA_FLAG_SPEECH | duer::MEDIA_FLAG_SAVE_PREVIOUS);
+					}
+					else {
+						duer::YTMediaManager::instance().play_url(links->link[0].link_url, duer::MEDIA_FLAG_DCS_URL);
+					}
+				}
+				else {
+					duer::YTMediaManager::instance().play_url(links->link[0].name_tts_url, duer::MEDIA_FLAG_SPEECH);
+				}
+			}
+#endif
+			break;
+		}
+		#if 1
+		case NLP_RESULT_TYPE_VOL_CMD:
+		{	
+			VOLUME_CONTROL_TYPE_t vol_ret = dcl_nlp_volume_cmd_decode(asr_result->str_result);//音量调节
+
+			switch (vol_ret)
+			{
+				case VOLUME_CONTROL_INITIAL://error state
+				{
+					//audio_play_tone_mem(FLASH_MUSIC_DYY_ERROR_PLEASE_TRY_AGAIN_LATER, AUDIO_TERM_TYPE_NOW);
+					break;
+				}
+				case VOLUME_CONTROL_HIGHER:
+				{
+					//audio_play_tone_mem(FLASH_MUSIC_DYY_VOLUME_UP, AUDIO_TERM_TYPE_NOW);
+					break;
+				}
+				case VOLUME_CONTROL_LOWER:
+				{
+					//audio_play_tone_mem(FLASH_MUSIC_DYY_VOLUME_DOWN, AUDIO_TERM_TYPE_NOW);
+					break;
+				}
+				case VOLUME_CONTROL_MODERATE:
+				{
+					//audio_play_tone_mem(FLASH_MUSIC_DYY_VOLUME_CHANGE_OK, AUDIO_TERM_TYPE_NOW);
+					break;
+				}
+				case VOLUME_CONTROL_MAX:
+				{
+					//audio_play_tone_mem(FLASH_MUSIC_DYY_VOLUME_ALREADY_HIGHEST, AUDIO_TERM_TYPE_NOW);
+					break;
+				}
+				case VOLUME_CONTROL_MIN:
+				{
+					//audio_play_tone_mem(FLASH_MUSIC_DYY_VOLUME_ALREADY_LOWEST, AUDIO_TERM_TYPE_NOW);
+					break;
+				}
+				default:
+					break;
+			}
+			break;
+		}
+		#endif
+		
+		case NLP_RESULT_TYPE_CMD:
+		{
+			break;
+		}
+		default:
+			break;
+	}
+
+	if(nlp_result)
+		memory_free(nlp_result);
+
+	return;
+}
+
+void yt_dcl_rec_on_result(ASR_RESULT_t *asr_result)
+{
+	if(asr_result == NULL)
+	{
+		DEBUG_LOGE(LOG_TAG, "asr_result NULL!!");
+		return;
+	}
+
+	if(asr_result->record_sn != record_sn)
+	{
+		DEBUG_LOGE(LOG_TAG, "ignore record_sn[%d] asr_result!");
+		return;
+	}
+	
+	yt_dcl_process_result(asr_result);
+}
+
+void yt_dcl_rec_on_data(char *data, int size)
+{	
+	switch(dcl_mode)
+	{
+		case DEEPBRAIN_MODE_ASR:
+
+			ASR_PCM_OBJECT_t *asr_obj = NULL;
+			record_id++;
+			//语音识别请求
+			if (asr_service_new_asr_object(&asr_obj) == APP_FRAMEWORK_ERRNO_OK)
+			{
+				asr_obj->asr_call_back = yt_dcl_rec_on_result;
+				asr_obj->record_sn = record_sn;
+				asr_obj->record_id = record_id;
+				asr_obj->record_ms = 0;
+				asr_obj->time_stamp = get_time_of_day();
+				asr_obj->asr_mode = DCL_ASR_MODE_ASR_NLP;
+				asr_obj->asr_lang = DCL_ASR_LANG_CHINESE;
+				asr_obj->asr_engine = ASR_ENGINE_TYPE_DP_ENGINE;
+				if (size > 0)
+				{
+					if(record_id == 1) {
+						memcpy(asr_obj->record_data, amr_head, strlen(amr_head));
+						memcpy(asr_obj->record_data + strlen(amr_head), data, size);
+						asr_obj->record_len = size + strlen(amr_head);
+					}
+					else {
+						memcpy(asr_obj->record_data, data, size);
+						asr_obj->record_len = size;
+					}
+				}
+
+				if (asr_service_send_request(asr_obj) != APP_FRAMEWORK_ERRNO_OK)
+				{
+					asr_service_del_asr_object(asr_obj);
+					asr_obj = NULL;
+					DEBUG_LOGE(LOG_TAG, "asr_service_send_request failed");
+				}
+			}
+			else
+			{
+				DEBUG_LOGE(LOG_TAG, "asr_service_new_asr_object failed");
+			}
+			break;
+			
+		case DEEPBRAIN_MODE_MAGIC_VOICE:	
+		case DEEPBRAIN_MODE_WECHAT:
+			if(amrnb_data && amrnb_data_len + size < AMR_MAX_AUDIO_SIZE)
+			{
+				if (size > 0)
+				{					
+					memcpy(amrnb_data + amrnb_data_len, data, size);
+					amrnb_data_len += size;					
+					//DEBUG_LOGI(LOG_TAG, "DEEPBRAIN_MODE_WECHAT data size:%d wechat_data_len:%d",size, amrnb_data_len);
+				}
+			}
+			else
+			{	
+				//DEBUG_LOGE(LOG_TAG, "DEEPBRAIN_MODE_WECHAT stop wechat_data:%x wechat_data_len:%d",amrnb_data,amrnb_data_len);
+				duer::event_trigger(duer::EVT_KEY_REC_RELEASE);
+			}
+			break;
+
+		default:			
+			DEBUG_LOGE(LOG_TAG, "no such mode!!");
+			break;
+	}
+}
+
+void yt_dcl_rec_on_start()
+{	
+	record_id = 0;	
+	if(dcl_mode == DEEPBRAIN_MODE_WECHAT || dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE)
+	{
+		amrnb_data = (char*)memory_malloc(AMR_MAX_AUDIO_SIZE);
+		if(!amrnb_data)		
+			DEBUG_LOGE(LOG_TAG, "rec_malloc wechat_data failed!!");
+
+		amrnb_data_len = 0;
+
+		memcpy(amrnb_data, amr_head, strlen(amr_head));
+		amrnb_data_len += strlen(amr_head);
+	}
+}
+
+void yt_dcl_rec_on_stop()
+{
+	switch(dcl_mode)
+	{
+		case DEEPBRAIN_MODE_ASR:
+			ASR_PCM_OBJECT_t *asr_obj = NULL;
+			record_id++;
+			record_id *= -1;
+			//语音识别请求
+			if (asr_service_new_asr_object(&asr_obj) == APP_FRAMEWORK_ERRNO_OK)
+			{
+				asr_obj->asr_call_back = yt_dcl_rec_on_result;
+				asr_obj->record_sn = record_sn;
+				asr_obj->record_id = record_id;
+				asr_obj->record_len = 0;
+				asr_obj->record_ms = (abs(record_id) > 0) ? 2000 : 0;
+				asr_obj->time_stamp = get_time_of_day();
+				asr_obj->asr_mode = DCL_ASR_MODE_ASR_NLP;
+				asr_obj->asr_lang = DCL_ASR_LANG_CHINESE;
+				asr_obj->asr_engine = ASR_ENGINE_TYPE_DP_ENGINE;
+
+				if (asr_service_send_request(asr_obj) != APP_FRAMEWORK_ERRNO_OK)
+				{
+					asr_service_del_asr_object(asr_obj);
+					asr_obj = NULL;
+					DEBUG_LOGE(LOG_TAG, "asr_service_send_request failed");
+				}
+			}
+			else
+			{
+				DEBUG_LOGE(LOG_TAG, "asr_service_new_asr_object failed");
+			}
+
+			break;
+			
+		case DEEPBRAIN_MODE_WECHAT:
+			uint64_t encode_time = get_time_of_day();
+			DCL_AUTH_PARAMS_t dcl_auth_params = {0};
+			get_dcl_auth_params(&dcl_auth_params);
+
+						
+			DCL_ERROR_CODE_t ret = dcl_mpush_push_msg(&dcl_auth_params, amrnb_data, amrnb_data_len, "", "");
+			if (ret == DCL_ERROR_CODE_OK)
+			{
+				//audio_play_tone_mem(FLASH_MUSIC_SEND_SUCCESS, TERMINATION_TYPE_NOW);
+				DEBUG_LOGI(LOG_TAG, "mpush_service_send_file success"); 
+			}
+			else
+			{
+				//audio_play_tone_mem(FLASH_MUSIC_SEND_FAIL, TERMINATION_TYPE_NOW);
+				DEBUG_LOGE(LOG_TAG, "mpush_service_send_file failed"); 
+			}
+			
+			if(amrnb_data)	
+				memory_free(amrnb_data);
+
+			amrnb_data = NULL;
+			amrnb_data_len = 0;
+			break;
+			
+		case DEEPBRAIN_MODE_MAGIC_VOICE:
+			duer::yt_voice_change(amrnb_data, amrnb_data_len);
+			if(amrnb_data)	
+				memory_free(amrnb_data);
+
+			amrnb_data = NULL;
+			amrnb_data_len = 0;
+			break;
+			
+		default:			
+			DEBUG_LOGE(LOG_TAG, "no such mode!!");
+			break;
+	}
+}
+
+void start_recorder()
+{	
+	record_sn++;
+	duer::duer_recorder_start();
+}
+
+void talk_start()
+{	
+	if(duer::duer_recorder_is_busy())
+	{
+		duer::duer_recorder_stop();
+		wait_ms(500);
+		if(duer::duer_recorder_is_busy())
+			return;
+	}
+	
+	dcl_mode = DEEPBRAIN_MODE_ASR;
+	
+	duer::duer_recorder_set_vad(true);
+	duer::YTMediaManager::instance().play_data(YT_MCHAT_START,sizeof(YT_MCHAT_START), duer::MEDIA_FLAG_RECORD_TONE); 
+}
+
+void talk_stop()
+{
+	duer::duer_recorder_stop();	
+}
+
+void mchat_start()
+{	
+	if(duer::duer_recorder_is_busy())
+	{
+		duer::duer_recorder_stop();
+		wait_ms(500);
+		if(duer::duer_recorder_is_busy())
+			return;
+	}
+
+	dcl_mode = DEEPBRAIN_MODE_WECHAT;
+	duer::duer_recorder_set_vad(true);
+	duer::YTMediaManager::instance().play_data(YT_MCHAT_START,sizeof(YT_MCHAT_START), duer::MEDIA_FLAG_RECORD_TONE); 
+}
+
+void magic_voice_start()
+{	
+	if(duer::duer_recorder_is_busy())
+	{
+		duer::duer_recorder_stop();
+		wait_ms(500);
+		if(duer::duer_recorder_is_busy())
+			return;
+	}
+	
+	dcl_mode = DEEPBRAIN_MODE_MAGIC_VOICE;	
+	duer::duer_recorder_set_vad(true);
+	duer::YTMediaManager::instance().play_data(YT_MCHAT_START,sizeof(YT_MCHAT_START), duer::MEDIA_FLAG_RECORD_TONE); 
+}
+
+void play_pig_voice()
+{
+	static const char *voice = YT_DEEPBRAIN_PIG_1;
+	int voice_len =  (voice == YT_DEEPBRAIN_PIG_1) ? sizeof(YT_DEEPBRAIN_PIG_1) : sizeof(YT_DEEPBRAIN_PIG_2);
+	duer::YTMediaManager::instance().play_data(voice, voice_len, duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);	
+	voice = (voice == YT_DEEPBRAIN_PIG_1) ? YT_DEEPBRAIN_PIG_2 : YT_DEEPBRAIN_PIG_1;
+}
+
+void change_mode()
+{
+	dcl_next_mode = (dcl_next_mode + 1) % DEEPBRAIN_MODE_MAX;
+	switch(dcl_next_mode)
+	{
+		case DEEPBRAIN_MODE_ASR:
+			duer::YTMediaManager::instance().play_data(YT_DEEPBRAIN_MODE_ASR, sizeof(YT_DEEPBRAIN_MODE_ASR), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);	
+			break;
+			
+		case DEEPBRAIN_MODE_WECHAT:
+			duer::YTMediaManager::instance().play_data(YT_DEEPBRAIN_MODE_WECHAT, sizeof(YT_DEEPBRAIN_MODE_WECHAT), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);	
+			break;
+				
+		case DEEPBRAIN_MODE_MAGIC_VOICE:
+			duer::YTMediaManager::instance().play_data(YT_DEEPBRAIN_MAGIC_VOICE, sizeof(YT_DEEPBRAIN_MAGIC_VOICE), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);	
+			break;
+	}
+}
+
+void reset_wifi()
+{	
+	DEBUG_LOGE(LOG_TAG, "reset_wifi");
+	wifi_manage_start_airkiss();
+}
+
+void button_fall_handle()
+{
+    duer::event_trigger(duer::EVT_KEY_REC_PRESS);
+}
+
+void button_rise_handle()
+{
+//#ifndef DISABLE_LOCAL_VAD
+//    if(dcl_mode != DEEPBRAIN_MODE_ASR) 
+//#endif
+//	{
+        duer::event_trigger(duer::EVT_KEY_REC_RELEASE);
+//    }
+}
+
+void mchat_button_fall_handle()
+{
+	duer::event_trigger(duer::EVT_KEY_MCHAT_PRESS);
+}
+
+void mchat_button_longpress_handle()
+{	
+	duer::event_trigger(duer::EVT_KEY_MCHAT_PRESS);
+}
+
+void mchat_button_rise_handle()
+{
+#if 1
+	duer::event_trigger(duer::EVT_KEY_MCHAT_RELEASE);
+#else
+    if (dcl_mode == DEEPBRAIN_MODE_WECHAT) {
+		duer::event_trigger(duer::EVT_KEY_MCHAT_RELEASE);
+    }
+	else
+	{
+		duer::event_trigger(duer::EVT_KEY_MCHAT_ALERT);
+	}
+#endif
+}
+
+void magic_button_fall_handle()
+{
+    duer::event_trigger(duer::EVT_KEY_MAGIC_PRESS);
+}
+
+void magic_button_rise_handle()
+{
+//#ifndef DISABLE_LOCAL_VAD
+//    if(dcl_mode != DEEPBRAIN_MODE_ASR ) 
+//#endif
+//	{
+    	duer::event_trigger(duer::EVT_KEY_MAGIC_RELEASE);
+//   }
+}
+
+void talk_button_fall_handle()
+{
+    if(dcl_next_mode == DEEPBRAIN_MODE_ASR) 
+    	duer::event_trigger(duer::EVT_KEY_REC_PRESS);
+	else if(dcl_next_mode == DEEPBRAIN_MODE_WECHAT)	
+		duer::event_trigger(duer::EVT_KEY_MCHAT_PRESS);
+	else if(dcl_next_mode == DEEPBRAIN_MODE_MAGIC_VOICE)
+    	duer::event_trigger(duer::EVT_KEY_MAGIC_PRESS);
+}
+
+void talk_button_rise_handle()
+{
+#ifndef DISABLE_LOCAL_VAD
+	if(dcl_next_mode != DEEPBRAIN_MODE_ASR) 
+#endif
+	{
+		duer::event_trigger(duer::EVT_KEY_MAGIC_RELEASE);
+	}
+}
+
+void mode_button_fall_handle()
+{
+	duer::event_trigger(duer::EVT_KEY_MODE_PRESS);
+}
+
+void pig_button_fall_handle()
+{
+	duer::event_trigger(duer::EVT_KEY_PIG_PRESS);
+}
+
+void wifi_button_fall_handle()
+{
+	duer::event_trigger(duer::EVT_RESET_WIFI);
+}
+
+void yt_dcl_init()
+{
+	if(amrnb_data) 
+		memory_free(amrnb_data);
+	
+	amrnb_data = NULL;
+	amrnb_data_len = 0;
+	
+	dcl_mode = DEEPBRAIN_MODE_ASR;	
+	dcl_next_mode = DEEPBRAIN_MODE_ASR;	
+	record_sn = 0;
+
+	duer::event_set_handler(duer::EVT_KEY_START_RECORD, &start_recorder);
+	duer::event_set_handler(duer::EVT_KEY_REC_PRESS, &talk_start);
+	duer::event_set_handler(duer::EVT_KEY_REC_RELEASE, &talk_stop);
+
+	duer::event_set_handler(duer::EVT_KEY_MCHAT_PRESS, &mchat_start);
+	duer::event_set_handler(duer::EVT_KEY_MCHAT_RELEASE, &talk_stop);
+
+	duer::event_set_handler(duer::EVT_KEY_MAGIC_PRESS, &magic_voice_start);
+	duer::event_set_handler(duer::EVT_KEY_MAGIC_RELEASE, &talk_stop);
+	//duer::event_set_handler(duer::EVT_KEY_MCHAT_ALERT, &mchat_play);
+    duer::event_set_handler(duer::EVT_RESET_WIFI, &reset_wifi);	
+	duer::event_set_handler(duer::EVT_KEY_PIG_PRESS, &play_pig_voice);
+	duer::event_set_handler(duer::EVT_KEY_MODE_PRESS, &change_mode);
+
+	duer::yt_key_init();
+
+	s_talk_button.fall(&talk_button_fall_handle);
+	s_talk_button.rise(&talk_button_rise_handle);
+
+	s_mode_button.fall(&mode_button_fall_handle);
+
+	s_pig_button.fall(&pig_button_fall_handle);
+#if 0	
+    s_button.fall(&button_fall_handle);
+    s_button.rise(&button_rise_handle);
+
+    s_magic_button.fall(&magic_button_fall_handle);
+    s_magic_button.rise(&magic_button_rise_handle);
+
+    s_mchat_button.fall(&mchat_button_fall_handle);
+    s_mchat_button.rise(&mchat_button_rise_handle);
+#endif
+
+    //s_mchat_button.longpress(&mchat_button_longpress_handle, 500, duer::YT_LONG_KEY_WITH_RISE);
+
+    s_wifi_button.longpress(&wifi_button_fall_handle, 3000, duer::YT_LONG_KEY_ONCE);
+}
+
+}
