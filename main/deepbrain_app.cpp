@@ -10,6 +10,7 @@
 #include "dcl_nlp_decode.h"
 #include "dcl_volume_decode.h"
 #include "dcl_mpush_push_msg.h"
+#include "dcl_mpush_push_stream.h"
 
 #include "asr_service.h"
 #include "wifi_manage.h"
@@ -347,6 +348,7 @@ void yt_dcl_rec_on_result_timeout(void *evt)
 }
 
 static bool bFirstWechatRelease = false;
+static void *handler = NULL;//// for wechat
 
 void yt_dcl_rec_on_data(char *data, int size)
 {	
@@ -411,6 +413,7 @@ void yt_dcl_rec_on_data(char *data, int size)
 			break;
 
 		case DEEPBRAIN_MODE_WECHAT:
+		#if 0	/// 非流式  在5981a上跑步起来
 			if(wechat_amrnb_data && wechat_amrnb_data_len + size < AMR_MAX_AUDIO_SIZE)
 			{
 				if (size > 0)
@@ -425,6 +428,56 @@ void yt_dcl_rec_on_data(char *data, int size)
 				//DEBUG_LOGE(LOG_TAG, "DEEPBRAIN_MODE_WECHAT stop wechat_data:%x wechat_data_len:%d",amrnb_data,amrnb_data_len);
 				duer::event_trigger(duer::EVT_KEY_STOP_RECORD);
 			}
+		#else /// 流式
+		{
+			record_id++;
+			
+			if (record_id == 1)
+			{
+				DCL_AUTH_PARAMS_t dcl_auth_params = {0};
+				get_dcl_auth_params(&dcl_auth_params);
+				if (dcl_mpush_push_stream_create(&handler, &dcl_auth_params) != DCL_ERROR_CODE_OK)
+				{
+					DEBUG_LOGE(LOG_TAG, "dcl_mpush_push_stream_create failed");
+					return;
+				}
+			}
+			if (handler == NULL)
+			{
+				return;
+			}			
+			if (record_id > 0)
+			{
+				if(record_id == 1)
+				{
+					if (dcl_mpush_push_stream(handler, amr_head, strlen(amr_head)) != DCL_ERROR_CODE_OK)
+					{
+						DEBUG_LOGE(LOG_TAG, "dcl_mpush_push_stream failed");
+						handler = NULL;
+						return;
+					}	
+				}
+				
+				if (dcl_mpush_push_stream(handler, data, size) != DCL_ERROR_CODE_OK)
+				{
+					DEBUG_LOGE(LOG_TAG, "dcl_mpush_push_stream failed");
+					handler = NULL;
+					return;
+				}
+			}
+			else
+			{	
+				if (dcl_mpush_push_stream(handler, NULL, 0) != DCL_ERROR_CODE_OK)
+				{
+					DEBUG_LOGE(LOG_TAG, "dcl_mpush_push_stream failed");
+					handler = NULL;
+					return;
+				}		
+				dcl_mpush_push_stream_delete(handler);
+				handler = NULL;
+			}	
+		}
+		#endif
 			break;
 
 		default:			
@@ -455,6 +508,7 @@ void yt_dcl_rec_on_start()
 			break;
 
 		case DEEPBRAIN_MODE_WECHAT:
+		#if 0	
 			wechat_amrnb_data = (char*)memory_malloc(AMR_MAX_AUDIO_SIZE);
 			if(!wechat_amrnb_data) 	
 			{
@@ -466,6 +520,10 @@ void yt_dcl_rec_on_start()
 			
 			memcpy(wechat_amrnb_data, amr_head, strlen(amr_head));
 			wechat_amrnb_data_len += strlen(amr_head);
+		#else
+			record_id = 0;			
+			record_sn = 0;
+		#endif
 			break;
 			
 		case DEEPBRAIN_MODE_MAGIC_VOICE:			
@@ -528,6 +586,7 @@ void yt_dcl_rec_on_stop()
 			break;
 			
 		case DEEPBRAIN_MODE_WECHAT:
+		#if 0	
 			uint64_t encode_time = get_time_of_day();
 			DCL_AUTH_PARAMS_t dcl_auth_params = {0};
 			get_dcl_auth_params(&dcl_auth_params);
@@ -553,7 +612,19 @@ void yt_dcl_rec_on_stop()
 
 			wechat_amrnb_data = NULL;
 			wechat_amrnb_data_len = 0;
+		#else
 			
+			record_id++;
+			record_id *= -1;
+			if (dcl_mpush_push_stream(handler, NULL, 0) != DCL_ERROR_CODE_OK)
+			{
+				DEBUG_LOGE(LOG_TAG, "dcl_mpush_push_stream failed");
+				handler = NULL;
+				return;
+			}		
+			dcl_mpush_push_stream_delete(handler);
+			handler = NULL;
+		#endif
 			duer::YTMediaManager::instance().play_data(YT_WECHAT_SEND,sizeof(YT_WECHAT_SEND), duer::MEDIA_FLAG_SPEECH); 	
 			break;
 			

@@ -13,8 +13,8 @@
  * permissions and limitations under the License.
  */
 
-#ifndef DCL_MPUSH_PUSH_MSG_H
-#define DCL_MPUSH_PUSH_MSG_H
+#ifndef DCL_MPUSH_PUSH_STREAM_H
+#define DCL_MPUSH_PUSH_STREAM_H
  
 #include "dcl_common_interface.h"
  
@@ -22,24 +22,37 @@
  extern "C" {
 #endif
 
-/* dcl mpush push msg handle */
-typedef struct DCL_MPUSH_PUSH_MSG_HANDLER_t
+//HTTP buffer
+typedef struct DCL_MPUSH_PUSH_STREAM_HANDLER_t
 {
-	DCL_HTTP_BUFFER_t http_buffer;
-	char base64_enode_buffer[10*1024];
-	char send_buffer[/*10*/8*1024];
-}DCL_MPUSH_PUSH_MSG_HANDLER_t;
+	int32_t sock;
+	char 	domain[64];
+	char 	port[8];
+	char 	params[64];
+	char 	req_header[1024];
+	
+	char    str_nonce[64];
+	char    str_timestamp[64];
+	char    str_private_key[64];
+	
+	void	*json_body;
+}DCL_MPUSH_PUSH_STREAM_HANDLER_t;
 
-DCL_ERROR_CODE_t dcl_mpush_push_msg(
-	const DCL_AUTH_PARAMS_t* const input_params,
+DCL_ERROR_CODE_t dcl_mpush_push_stream_create(
+	void **handler,
+	const DCL_AUTH_PARAMS_t* const input_params);
+
+DCL_ERROR_CODE_t dcl_mpush_push_stream(
+	void *handler,
 	const char *data, 
-	const uint32_t data_len,
-	const char *nlp_text,
-	const char *to_user);
+	const uint32_t data_len);
+
+DCL_ERROR_CODE_t dcl_mpush_push_stream_delete(
+	void *handler);
 
 #ifdef __cplusplus
  }
 #endif
  
-#endif  /* DCL_MPUSH_PUSH_MSG_H */
+#endif  /* DCL_MPUSH_PUSH_STREAM_H */
 
