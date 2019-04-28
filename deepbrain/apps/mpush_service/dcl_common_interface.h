@@ -93,16 +93,30 @@ typedef struct DCL_HTTP_BUFFER_t
 	char 	domain[128];
 	char 	port[8];
 	char 	params[1024];
+	
+#if 0	//// modify by lijun 
 	char 	req_header[1024*2];
 	char	req_body[1024*2];
-	char	str_request[1024*4];
+	char	str_request[1024*4];	
+#elif 1
+	char	req_header[512];
+	char	req_body[512];
+	char	str_request[1024];
+#else
+	char	req_header[1024];
+	char	req_body[1024];
+	char	str_request[1024*2];
+#endif
+
 	char	str_response[MAX_NLP_RESULT_LENGTH];
 	
 	char    str_nonce[64];
 	char    str_timestamp[64];
 	char    str_private_key[64];
-	
-	void	*json_body;
+#if 0	
+	char    json_body[1024*8];   
+	//char	*json_body;
+#endif	
 }DCL_HTTP_BUFFER_t;
 
 #ifdef __cplusplus

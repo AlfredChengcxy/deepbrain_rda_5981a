@@ -96,14 +96,14 @@ static DCL_ERROR_CODE_t dcl_update_time_session_end(
 		sock_close(http_buffer->sock);
 		http_buffer->sock = INVALID_SOCK;
 	}
-
+#if 0
 	//free json object
 	if (http_buffer->json_body != NULL)
 	{
-		cJSON_Delete((cJSON *)http_buffer->json_body);
-		http_buffer->json_body = NULL;
+		//cJSON_Delete((cJSON *)http_buffer->json_body);
+		//http_buffer->json_body = NULL;
 	}
-	
+#endif	
 	//free memory
 	memory_free(handler);
 	handler = NULL;
@@ -179,27 +179,33 @@ static DCL_ERROR_CODE_t dcl_update_time_decode_packet(
 		char* pBody = http_get_body(http_buffer->str_response);
 		if (pBody != NULL)
 		{
-			http_buffer->json_body = cJSON_Parse(pBody);
-			if (http_buffer->json_body != NULL) 
-			{
-				cJSON *pJson_status = cJSON_GetObjectItem((cJSON *)http_buffer->json_body, "statusCode");
+			cJSON * json_body = NULL;
+			json_body = cJSON_Parse(pBody);
+			//http_buffer->json_body = (char *)cJSON_Parse(pBody);
+			//if (http_buffer->json_body != NULL) 
+			if(json_body!=NULL)
+			{	
+				cJSON *pJson_status = cJSON_GetObjectItem(json_body, "statusCode");
 				if (pJson_status == NULL || pJson_status->valuestring == NULL)
 				{
 					DEBUG_LOGE(TAG_LOG, "statusCode not found");
+					cJSON_Delete(json_body);
 					return DCL_ERROR_CODE_SERVER_ERROR;
 				}
 
 				if (strncasecmp(pJson_status->valuestring, "OK", strlen("OK")) != 0)
 				{
 					DEBUG_LOGE(TAG_LOG, "statusCode:%s", pJson_status->valuestring);
+					cJSON_Delete(json_body);
 					return DCL_ERROR_CODE_SERVER_ERROR;
 				}
 
 				
-				cJSON *json_content = cJSON_GetObjectItem((cJSON *)http_buffer->json_body, "content");
+				cJSON *json_content = cJSON_GetObjectItem(json_body, "content");
 				if (json_content == NULL)
 				{
 					DEBUG_LOGE(TAG_LOG, "json string has no content node");
+					cJSON_Delete(json_body);
 					return DCL_ERROR_CODE_SERVER_ERROR;
 				}
 
@@ -208,11 +214,13 @@ static DCL_ERROR_CODE_t dcl_update_time_decode_packet(
 					|| (uint32_t)(pJson_content_time->valuedouble/1000) == 0)
 				{
 					DEBUG_LOGE(TAG_LOG, "currentTimeMillis not found");
+					cJSON_Delete(json_body);
 					return DCL_ERROR_CODE_SERVER_ERROR;
 				}
 
 				*unix_time_stamp = (uint32_t)(pJson_content_time->valuedouble/1000);
 				DEBUG_LOGE(TAG_LOG, "time now = [%u]", *unix_time_stamp);
+				cJSON_Delete(json_body);
 			}
 			else
 			{

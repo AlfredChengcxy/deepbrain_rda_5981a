@@ -14,7 +14,7 @@
 
 #include "us_ticker_api.h"
 #include "lightduer_log.h"
-#include "semaphore_lock_interface.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* C++ */

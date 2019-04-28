@@ -694,7 +694,7 @@ static int mdm_send_magic_data_to_buffer(char* data, size_t size, int flags)
 #if 1/// add by lijun
 
 	//int nPreVolume = duer::YTMediaManager::instance().get_volume();
-	duer::YTMediaManager::instance().set_volume(100);	
+	//duer::YTMediaManager::instance().set_volume(100);	
 #endif
 
 	//bExitMagicData = false;

@@ -43,6 +43,15 @@ bool get_tts_play_url(
 	snprintf(input_params.str_app_id, sizeof(input_params.str_app_id), "%s", DEEP_BRAIN_APP_ID);
 	snprintf(input_params.str_robot_id, sizeof(input_params.str_robot_id), "%s", DEEP_BRAIN_ROBOT_ID);
 	get_flash_cfg(FLASH_CFG_DEVICE_ID, &input_params.str_device_id);
+
+
+	DEBUG_LOGE(TAG_LOG, "str_app_id[%s]", input_params.str_app_id);
+	DEBUG_LOGE(TAG_LOG, "str_robot_id[%s]", input_params.str_robot_id);
+	DEBUG_LOGE(TAG_LOG, "str_device_id[%s]", input_params.str_device_id);
+	DEBUG_LOGE(TAG_LOG, "str_user_id[%s]", input_params.str_user_id);
+	DEBUG_LOGE(TAG_LOG, "str_city_name[%s]", input_params.str_city_name);
+	DEBUG_LOGE(TAG_LOG, "str_city_longitude[%s]", input_params.str_city_longitude);
+	DEBUG_LOGE(TAG_LOG, "str_city_latitude[%s]", input_params.str_city_latitude);
 	
 	if (dcl_get_tts_url(&input_params, input_text, tts_url, url_len) == DCL_ERROR_CODE_OK)
 	{

@@ -6,7 +6,7 @@
 namespace duer {
 	//#define DISABLE_LOCAL_VAD
 	void duer_recorder_amr_init_decoder(void **handler);
-
+	void duer_recorder_reinit();
 	bool duer_recorder_is_busy();
 	void duer_recorder_set_vad(bool need_vad);
 

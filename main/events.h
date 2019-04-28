@@ -66,8 +66,6 @@ enum Events {
 	EVT_KEY_POWER_PRESS,
 	EVT_KEY_POWER_RELEASE,
 
-
-
     EVT_TOTAL
 };
 

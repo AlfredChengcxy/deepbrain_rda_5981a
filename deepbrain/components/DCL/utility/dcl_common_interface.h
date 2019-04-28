@@ -103,7 +103,6 @@ typedef struct DCL_HTTP_BUFFER_t
 	char	req_header[1024];
 	char	req_body[1024];
 	char	str_request[1024*2];
-
 #endif
 	char*	str_request_ex;
 	char	str_response[MAX_NLP_RESULT_LENGTH];

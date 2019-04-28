@@ -64,6 +64,12 @@ void duer_recorder_amr_init_decoder(void **handler)
 	*handler = YT_NB_AMR_InitDecoder(pBufferForDecoder,YT_NB_AMR_DECODER_SIZE_IN_BYTE);
 }
 
+
+void duer_recorder_reinit()
+{
+
+}
+
 static void duer_recorder_on_start()
 {	
 #ifndef DISABLE_LOCAL_VAD

@@ -47,6 +47,7 @@ static DCL_ERROR_CODE_t dcl_tts_session_begin(
 	handle = *tts_handle;
 	http_buffer = &handle->http_buffer;
 	http_buffer->sock = INVALID_SOCK;
+	///add by lijun
 
 	if (sock_get_server_info(DCL_SERVER_API_URL, (char*)&http_buffer->domain, (char*)&http_buffer->port, (char*)&http_buffer->params) != 0)
 	{
@@ -61,8 +62,7 @@ static DCL_ERROR_CODE_t dcl_tts_session_begin(
 			http_buffer->domain, http_buffer->port);
 		return DCL_ERROR_CODE_NETWORK_UNAVAILABLE;
 	}
-	sock_set_nonblocking(http_buffer->sock);
-	
+	sock_set_nonblocking(http_buffer->sock);	
 	return DCL_ERROR_CODE_OK;
 }
 
@@ -82,13 +82,15 @@ static DCL_ERROR_CODE_t dcl_tts_session_end(
 		http_buffer->sock = INVALID_SOCK;
 	}
 
-	//free json object
+#if 0	//free json object
 	if (http_buffer->json_body != NULL)
 	{
-		cJSON_Delete((cJSON *)http_buffer->json_body);
-		http_buffer->json_body = NULL;
+		//DEBUG_LOGE(TAG_LOG, "%x",http_buffer->json_body);
+		
+		//cJSON_Delete((cJSON *)http_buffer->json_body);
+		//http_buffer->json_body = NULL;
 	}
-	
+#endif	
 	//free memory
 	memory_free(tts_handle);
 	tts_handle = NULL;
@@ -168,26 +170,32 @@ static DCL_ERROR_CODE_t dcl_tts_decode_packet(
 		char* pBody = http_get_body(http_buffer->str_response);
 		if (pBody != NULL)
 		{
-			http_buffer->json_body = cJSON_Parse(pBody);
-			if (http_buffer->json_body != NULL) 
-			{
-				cJSON *pJson_status = cJSON_GetObjectItem((cJSON *)http_buffer->json_body, "statusCode");
+			cJSON * json_body = NULL;
+			json_body = cJSON_Parse(pBody);
+			//http_buffer->json_body = (char *)cJSON_Parse(pBody);
+			//if (http_buffer->json_body != NULL) 
+			if(json_body!=NULL)
+			{	
+				cJSON *pJson_status = cJSON_GetObjectItem(json_body, "statusCode");
 				if (pJson_status == NULL || pJson_status->valuestring == NULL)
 				{
 					DEBUG_LOGE(TAG_LOG, "statusCode not found");
+					cJSON_Delete(json_body);
 					return DCL_ERROR_CODE_SERVER_ERROR;
 				}
 
 				if (strncasecmp(pJson_status->valuestring, "OK", strlen("OK")) != 0)
 				{
 					DEBUG_LOGE(TAG_LOG, "statusCode:%s", pJson_status->valuestring);
+					cJSON_Delete(json_body);
 					return DCL_ERROR_CODE_SERVER_ERROR;
 				}
 				
-				cJSON *json_content = cJSON_GetObjectItem((cJSON *)http_buffer->json_body, "content");
+				cJSON *json_content = cJSON_GetObjectItem(json_body, "content");
 				if (json_content == NULL)
 				{
 					DEBUG_LOGE(TAG_LOG, "json string has no content node");
+					cJSON_Delete(json_body);
 					return DCL_ERROR_CODE_SERVER_ERROR;
 				}
 
@@ -195,16 +203,19 @@ static DCL_ERROR_CODE_t dcl_tts_decode_packet(
 				if (json_tts == NULL)
 				{
 					DEBUG_LOGE(TAG_LOG, "json string has no ttsLink node");
+					cJSON_Delete(json_body);
 					return DCL_ERROR_CODE_SERVER_ERROR;
 				}
 
 				if (json_tts == NULL || json_tts->valuestring == NULL)
 				{
 					DEBUG_LOGE(TAG_LOG, "ttsLink node is NULL");
+					cJSON_Delete(json_body);
 					return DCL_ERROR_CODE_SERVER_ERROR;
 				}
 				
 				snprintf(out_url, out_url_len, "%s", json_tts->valuestring);
+				cJSON_Delete(json_body);
 			}
 			else
 			{
@@ -250,7 +261,8 @@ DCL_ERROR_CODE_t dcl_get_tts_url(
 		DEBUG_LOGE(TAG_LOG, "dcl_tts_session_begin failed");
 		goto dcl_get_tts_url_error;
 	}
-	http_buffer = &tts_handle->http_buffer;
+
+	http_buffer = &tts_handle->http_buffer;	
 
 	//组包
 	err_code = dcl_tts_make_packet(tts_handle, input_params, input_text);
@@ -259,8 +271,10 @@ DCL_ERROR_CODE_t dcl_get_tts_url(
 		DEBUG_LOGE(TAG_LOG, "dcl_tts_make_packet failed");
 		goto dcl_get_tts_url_error;
 	}
-	//DEBUG_LOGI(TAG_LOG, "%s", http_buffer->str_request);
 
+	
+	printf( "str_request:[%s]\r\n",http_buffer->str_request);
+	
 	//发包
 	if (sock_writen_with_timeout(http_buffer->sock, http_buffer->str_request, strlen(http_buffer->str_request), 1000) != strlen(http_buffer->str_request)) 
 	{
@@ -268,11 +282,10 @@ DCL_ERROR_CODE_t dcl_get_tts_url(
 		err_code = DCL_ERROR_CODE_NETWORK_POOR;
 		goto dcl_get_tts_url_error;
 	}
-	
 	//接包
 	memset(http_buffer->str_response, 0, sizeof(http_buffer->str_response));
 	ret = sock_readn_with_timeout(http_buffer->sock, http_buffer->str_response, sizeof(http_buffer->str_response) - 1, 2000);
-	printf("%s\r\n",http_buffer->str_response);
+	printf( "str_response:[%s]\r\n",http_buffer->str_response);
 	
 	if (ret <= 0)
 	{

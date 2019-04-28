@@ -33,6 +33,7 @@ extern "C" {
 //#define MAX_NLP_RESULT_LENGTH (8*1024)
 
 
+
 /*DCL global error code define*/
 typedef enum DCL_ERROR_CODE_t
 {

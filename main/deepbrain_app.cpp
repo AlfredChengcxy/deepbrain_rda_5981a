@@ -776,7 +776,7 @@ void magic_voice_start()
 		
 		airkiss_lan_discovery_delete();
 		asr_service_delete();
-		mpush_service_delete();
+		//mpush_service_delete(); /// 不要关闭这个 
 		authorize_service_delete();
 		//wifi_manage_delete();
 		
@@ -784,19 +784,28 @@ void magic_voice_start()
 	}
 	else {
 		duer::duer_recorder_set_vad_asr(false);
-		yt_dcl_start();
+		
 
 		if(!bExitMagicData)
 		{
 			bExitMagicData = true;
 			while(!bExitMagicDatav1){rtos::Thread::wait(10);}			
-		}
-				
+		}		
+		while(duer::YTMediaManager::instance().is_playing())
+		{
+			DEBUG_LOGE(LOG_TAG, "is_playing");
+			wait_ms(100);
+		}	
+
+		duer::duer_recorder_reinit();
+
 		airkiss_lan_discovery_create(TASK_PRIORITY_1);
 		asr_service_create(TASK_PRIORITY_1);
-		mpush_service_create(TASK_PRIORITY_1);
+		//mpush_service_create(TASK_PRIORITY_1); /// no need
 		authorize_service_create(TASK_PRIORITY_1);
+
 		//wifi_manage_create(TASK_PRIORITY_1);
+		yt_dcl_start();
 		
 		duer::YTMediaManager::instance().play_data(YT_DB_EXIT_MAGIC_VOICE,sizeof(YT_DB_EXIT_MAGIC_VOICE), duer::MEDIA_FLAG_PROMPT_TONE);
 	}
@@ -1051,6 +1060,9 @@ void yt_dcl_start()
 	}
 
 	DEBUG_LOGI(LOG_TAG, "yt_dcl_start");
+
+
+	
 #if ZXP_PCBA	
 	duer::event_set_handler(duer::EVT_KEY_REC_PRESS, &talk_start);
 	duer::event_set_handler(duer::EVT_KEY_REC_RELEASE, &talk_stop);

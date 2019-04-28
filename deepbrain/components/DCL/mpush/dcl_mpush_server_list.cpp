@@ -82,13 +82,13 @@ static DCL_ERROR_CODE_t dcl_mpush_session_end(
 		http_buffer->sock = INVALID_SOCK;
 	}
 
-	//free json object
+#if 0	//free json object
 	if (http_buffer->json_body != NULL)
 	{
-		cJSON_Delete((cJSON *)http_buffer->json_body);
-		http_buffer->json_body = NULL;
+		//cJSON_Delete((cJSON *)http_buffer->json_body);
+		//http_buffer->json_body = NULL;
 	}
-	
+#endif	
 	//free memory
 	memory_free(handler);
 	handler = NULL;
@@ -143,27 +143,34 @@ static DCL_ERROR_CODE_t dcl_mpush_decode_packet(
 		char* pBody = http_get_body(http_buffer->str_response);
 		if (pBody != NULL)
 		{
-			http_buffer->json_body = cJSON_Parse(pBody);
-			if (http_buffer->json_body != NULL) 
+			cJSON * json_body = NULL;
+			json_body = cJSON_Parse(pBody);
+			//http_buffer->json_body = (char *)cJSON_Parse(pBody);
+			//if (http_buffer->json_body != NULL) 
+			if(json_body!=NULL)
 			{
-				cJSON *pJson_status = cJSON_GetObjectItem((cJSON *)http_buffer->json_body, "statusCode");
+
+				cJSON *pJson_status = cJSON_GetObjectItem(json_body, "statusCode");
 				if (pJson_status == NULL 
 					|| pJson_status->valuestring == NULL)
 				{
 					DEBUG_LOGE(TAG_LOG, "statusCode not found");
+					cJSON_Delete(json_body);
 					return DCL_ERROR_CODE_SERVER_ERROR;
 				}
 
 				if (strncasecmp(pJson_status->valuestring, "OK", strlen("OK")) != 0)
 				{
 					DEBUG_LOGE(TAG_LOG, "statusCode:%s", pJson_status->valuestring);
+					cJSON_Delete(json_body);
 					return DCL_ERROR_CODE_SERVER_ERROR;
 				}
 	
-		        cJSON *pJson_content = cJSON_GetObjectItem((cJSON *)http_buffer->json_body, "content");
+		        cJSON *pJson_content = cJSON_GetObjectItem(json_body, "content");
 				if (NULL == pJson_content)
 				{
 					DEBUG_LOGE(TAG_LOG, "content not found");
+					cJSON_Delete(json_body);
 					return DCL_ERROR_CODE_SERVER_ERROR;
 				}
 
@@ -171,6 +178,7 @@ static DCL_ERROR_CODE_t dcl_mpush_decode_packet(
 				if (NULL == pJson_data)
 				{
 					DEBUG_LOGE(TAG_LOG, "data not found");
+					cJSON_Delete(json_body);
 					return DCL_ERROR_CODE_SERVER_ERROR;
 				}
 
@@ -178,6 +186,7 @@ static DCL_ERROR_CODE_t dcl_mpush_decode_packet(
 				if (list_size <= 0)
 				{
 					DEBUG_LOGE(TAG_LOG, "list_size is 0");
+					cJSON_Delete(json_body);
 					return DCL_ERROR_CODE_SERVER_ERROR;
 				}
 
@@ -209,10 +218,12 @@ static DCL_ERROR_CODE_t dcl_mpush_decode_packet(
 
 				if (n <= 0)
 				{
+					cJSON_Delete(json_body);
 					return DCL_ERROR_CODE_SERVER_ERROR;
 				}
 
 				server_list->server_num = n;
+				cJSON_Delete(json_body);
 			}
 			else
 			{

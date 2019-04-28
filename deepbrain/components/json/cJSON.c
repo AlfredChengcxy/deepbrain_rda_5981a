@@ -79,9 +79,17 @@ static cJSON *cJSON_New_Item(void)
 }
 
 /* Delete a cJSON structure. */
+
+
+#include "debug_log_interface.h"
+#define LOG_TAG "cJSON"
+
 void cJSON_Delete(cJSON *c)
 {
 	cJSON *next;
+	DEBUG_LOGD(LOG_TAG,"cJSON_Delete");
+	
+	
 	while (c)
 	{
 		next=c->next;
