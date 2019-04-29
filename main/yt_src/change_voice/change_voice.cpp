@@ -140,9 +140,13 @@ int yt_voice_change_init(char *data, int size)
 
 
 #if USE_LJ_MAGIC //TERENCE---2019/03/05
-	if(!pVoiceChanger)pVoiceChanger = YT_MV_InitChanger();
+	if(NULL == pVoiceChanger)
+	{
+		DUER_LOGE("YT_MV_InitChanger");
+		pVoiceChanger = YT_MV_InitChanger();
+	}
 		
-	if(!pVoiceChanger)
+	if(NULL == pVoiceChanger)
 	{		
 		if(pDecoderState)
 			YT_NB_AMR_FreeDecoder(&pDecoderState);
@@ -253,7 +257,10 @@ void yt_voice_change_free()
 	pVoiceChanger = NULL;
 
 	if(pDecoderState)
+	{
+		DUER_LOGE("YT_NB_AMR_FreeDecoder");
 		YT_NB_AMR_FreeDecoder(&pDecoderState);
+	}
 #elif USE_YT_MAGIC
 	if(NULL != GLOBAL_pBufferForVoiceChanger)
 	{

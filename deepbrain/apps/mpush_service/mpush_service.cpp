@@ -1005,7 +1005,6 @@ APP_FRAMEWORK_ERRNO_t mpush_service_delete(void)
 	app_send_message(APP_NAME_MPUSH_SERVICE, APP_NAME_MPUSH_SERVICE, APP_EVENT_DEFAULT_EXIT, NULL, 0);
 	while(g_thMpush->get_state() != rtos::Thread::Deleted){rtos::Thread::wait(10);}
 	task_thread_exit(g_thMpush);
-
 }
 
 

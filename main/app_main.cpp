@@ -171,6 +171,9 @@ int main()
 		
 	deepbrain::yt_dcl_init();
 
+
+//memory_info();
+
 	app_main_create(TASK_PRIORITY_1);
 
 	//uart shell
@@ -178,6 +181,7 @@ int main()
 
 	//wifi manage
 	wifi_manage_create(TASK_PRIORITY_1);
+
 
 	//asr service create
 	asr_service_create(TASK_PRIORITY_1);
@@ -199,6 +203,19 @@ int main()
 
 	//airkiss lan discovery
 	airkiss_lan_discovery_create(TASK_PRIORITY_1);	
+
+
+#if 0
+memory_info();
+	
+	rtos::Thread::wait(100);
+	airkiss_lan_discovery_delete();
+	asr_service_delete();
+	mpush_service_delete();  
+	authorize_service_delete();
+	
+memory_info();	
+#endif	
 
 	DEBUG_LOGI(LOG_TAG, "----entry event_loop----");
     duer::event_loop();

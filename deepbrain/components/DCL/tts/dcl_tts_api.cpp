@@ -103,10 +103,17 @@ static DCL_ERROR_CODE_t dcl_tts_make_packet(
 	const DCL_AUTH_PARAMS_t* const input_params,
 	const char* const input_text)
 {
+	char str_nonce[64]={0};
+	char str_timestamp[64]={0};
+	char str_private_key[64]={0};
+	
 	DCL_HTTP_BUFFER_t *http_buffer = &tts_handle->http_buffer;
 	
 	//make body string
-	crypto_generate_request_id(http_buffer->str_nonce, sizeof(http_buffer->str_nonce));
+	
+	
+	//crypto_generate_request_id(http_buffer->str_nonce, sizeof(http_buffer->str_nonce));
+	crypto_generate_request_id(str_nonce, sizeof(str_nonce));
 	snprintf(http_buffer->req_body, sizeof(http_buffer->req_body),
 		"{ \"app_id\": \"%s\","
 			"\"content\": "
@@ -120,16 +127,22 @@ static DCL_ERROR_CODE_t dcl_tts_make_packet(
 		input_params->str_app_id,
 		input_text,
 		input_params->str_device_id,
-		http_buffer->str_nonce,
+		//http_buffer->str_nonce,
+		str_nonce,
 		input_params->str_robot_id,
 		input_params->str_user_id);
 	
 	//make header string
-	crypto_generate_nonce((uint8_t *)http_buffer->str_nonce, sizeof(http_buffer->str_nonce));
-	crypto_time_stamp((unsigned char*)http_buffer->str_timestamp, sizeof(http_buffer->str_timestamp));
-	crypto_generate_private_key((uint8_t *)http_buffer->str_private_key, sizeof(http_buffer->str_private_key), 
-			http_buffer->str_nonce, 
-			http_buffer->str_timestamp, 
+	//crypto_generate_nonce((uint8_t *)http_buffer->str_nonce, sizeof(http_buffer->str_nonce));
+	crypto_generate_nonce((uint8_t *)str_nonce, sizeof(str_nonce));
+	//crypto_time_stamp((unsigned char*)http_buffer->str_timestamp, sizeof(http_buffer->str_timestamp));
+	crypto_time_stamp((unsigned char*)str_timestamp, sizeof(str_timestamp));
+	crypto_generate_private_key((uint8_t *)str_private_key, sizeof(str_private_key),
+	//crypto_generate_private_key((uint8_t *)http_buffer->str_private_key, sizeof(http_buffer->str_private_key), 
+			//http_buffer->str_nonce, 
+			str_nonce,
+			//http_buffer->str_timestamp, 
+			str_timestamp,
 			input_params->str_robot_id);
 	snprintf(http_buffer->req_header, sizeof(http_buffer->req_header), 
 		"POST %s HTTP/1.0\r\n"
@@ -147,9 +160,12 @@ static DCL_ERROR_CODE_t dcl_tts_make_packet(
 		http_buffer->domain, 
 		http_buffer->port, 
 		strlen(http_buffer->req_body), 
-		http_buffer->str_nonce, 
-		http_buffer->str_timestamp, 
-		http_buffer->str_private_key, 
+		//http_buffer->str_nonce, 
+		str_nonce,
+		//http_buffer->str_timestamp, 
+		str_timestamp,
+		//http_buffer->str_private_key, 
+		str_private_key,
 		input_params->str_robot_id);
 
 	//make full request body
@@ -273,7 +289,7 @@ DCL_ERROR_CODE_t dcl_get_tts_url(
 	}
 
 	
-	printf( "str_request:[%s]\r\n",http_buffer->str_request);
+	DEBUG_LOGE(TAG_LOG, "str_request:[%s]\r\n",http_buffer->str_request);
 	
 	//发包
 	if (sock_writen_with_timeout(http_buffer->sock, http_buffer->str_request, strlen(http_buffer->str_request), 1000) != strlen(http_buffer->str_request)) 
@@ -285,7 +301,8 @@ DCL_ERROR_CODE_t dcl_get_tts_url(
 	//接包
 	memset(http_buffer->str_response, 0, sizeof(http_buffer->str_response));
 	ret = sock_readn_with_timeout(http_buffer->sock, http_buffer->str_response, sizeof(http_buffer->str_response) - 1, 2000);
-	printf( "str_response:[%s]\r\n",http_buffer->str_response);
+	
+	DEBUG_LOGE(TAG_LOG, "str_response:[%x][%d][%s]\r\n",http_buffer->str_response,sizeof(http_buffer->str_response),http_buffer->str_response);
 	
 	if (ret <= 0)
 	{

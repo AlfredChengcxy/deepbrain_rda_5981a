@@ -708,7 +708,7 @@ static int mdm_send_magic_data_to_buffer(char* data, size_t size, int flags)
         }
 
 		ret = yt_voice_change_get_data(&buff, &buff_bytes); 		
-		DUER_LOGI("Reading %d bytes for %d bytes ret %d", buff_bytes, FRAME_SIZE,ret);
+		DUER_LOGD("Reading %d bytes for %d bytes ret %d", buff_bytes, FRAME_SIZE,ret);
 		
 		if(read_bytes + buff_bytes < FRAME_SIZE)
 		{
@@ -723,14 +723,14 @@ static int mdm_send_magic_data_to_buffer(char* data, size_t size, int flags)
 			else {
 				data_pos = DUER_HTTP_DATA_MID;
 			}
-			DUER_LOGI("read_bytes:%d",read_bytes);
+			DUER_LOGD("read_bytes:%d",read_bytes);
 			
 			copy_bytes = FRAME_SIZE - read_bytes;
 			memcpy(read_buff + read_bytes, buff, copy_bytes);
 			mdm_media_data_out_handler(&ctx, data_pos, read_buff, FRAME_SIZE, NULL);
 
 			
-			DUER_LOGI("send bytes:%d",copy_bytes + read_bytes);
+			DUER_LOGD("send bytes:%d",copy_bytes + read_bytes);
 
 		//// by lijun a big bug for lj_magic
 			if(buff_bytes - copy_bytes > FRAME_SIZE)
@@ -753,7 +753,7 @@ static int mdm_send_magic_data_to_buffer(char* data, size_t size, int flags)
 		if(ret == 0) 
 			{
 			data_pos = DUER_HTTP_DATA_LAST;			
-			DUER_LOGI("remain bytes:%d  buff_bytes%d ret:%d",read_bytes, buff_bytes, ret);
+			DUER_LOGD("remain bytes:%d  buff_bytes%d ret:%d",read_bytes, buff_bytes, ret);
 			if(read_bytes + buff_bytes < FRAME_SIZE)
 			{
 					if((read_bytes + buff_bytes) > 44)//TERENCE---2019/03/11: bug fix

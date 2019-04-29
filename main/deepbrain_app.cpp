@@ -206,12 +206,15 @@ void yt_dcl_process_result(ASR_RESULT_t *asr_result)
 				}
 				else
 				{
+					DEBUG_LOGE(LOG_TAG, "before get_tts_play_url");
+					memory_info();
 					bool ret = get_tts_play_url(nlp_result->chat_result.text, (char*)nlp_result->chat_result.link, sizeof(nlp_result->chat_result.link));
 					if (!ret)
 					{
 						ret = get_tts_play_url(nlp_result->chat_result.text, (char*)nlp_result->chat_result.link, sizeof(nlp_result->chat_result.link));
 					}
-					
+					DEBUG_LOGE(LOG_TAG, "after get_tts_play_url");
+					memory_info();
 					if (ret)
 					{					
 						duer::YTMediaManager::instance().clear_queue();
@@ -234,6 +237,8 @@ void yt_dcl_process_result(ASR_RESULT_t *asr_result)
 		{
 			NLP_RESULT_LINKS_T *links = &nlp_result->link_result;
 			DEBUG_LOGI(LOG_TAG, "p_links->link_size=[%d]", links->link_size);
+		//add
+			duer::duer_recorder_reinit();
 
 			if(links->link_size > 0)
 			{				
@@ -767,22 +772,35 @@ void magic_voice_start()
 	dcl_mode = (dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE)	? DEEPBRAIN_MODE_ASR : DEEPBRAIN_MODE_MAGIC_VOICE;
 
 	if(dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE) {
+		DEBUG_LOGE(LOG_TAG, "before enter magic");
+		memory_info();
+
+		
 		rec_mode = DEEPBRAIN_MODE_MAGIC_VOICE;
 		yt_dcl_stop();
 		duer::duer_recorder_set_vad(true);
 
 		bExitMagicData = false;
+		duer::YTMediaManager::instance().stop();
+		duer::YTMediaManager::instance().stop_completely();
 		duer::YTMediaManager::instance().clear_queue();
 		
 		airkiss_lan_discovery_delete();
 		asr_service_delete();
-		//mpush_service_delete(); /// 不要关闭这个 
+		mpush_service_delete();  
 		authorize_service_delete();
 		//wifi_manage_delete();
+		
+		DEBUG_LOGE(LOG_TAG, "after enter magic");
+		memory_info();	
 		
 		duer::YTMediaManager::instance().play_data(YT_DB_ENTER_MAGIC_VOICE,sizeof(YT_DB_ENTER_MAGIC_VOICE), duer::MEDIA_FLAG_RECORD_TONE);
 	}
 	else {
+
+		duer::duer_recorder_reinit();
+		rec_mode = DEEPBRAIN_MODE_ASR;
+		
 		duer::duer_recorder_set_vad_asr(false);
 		
 
@@ -790,22 +808,35 @@ void magic_voice_start()
 		{
 			bExitMagicData = true;
 			while(!bExitMagicDatav1){rtos::Thread::wait(10);}			
-		}		
+		}
+		
+		duer::YTMediaManager::instance().stop();
+		duer::YTMediaManager::instance().stop_completely();
+	#if 1	
 		while(duer::YTMediaManager::instance().is_playing())
 		{
 			DEBUG_LOGE(LOG_TAG, "is_playing");
-			wait_ms(100);
+			rtos::Thread::wait(10);
 		}	
+	#endif
 
+		DEBUG_LOGE(LOG_TAG, "before exit magic");
+		memory_info();
+
+		
+		
 		duer::duer_recorder_reinit();
 
 		airkiss_lan_discovery_create(TASK_PRIORITY_1);
 		asr_service_create(TASK_PRIORITY_1);
-		//mpush_service_create(TASK_PRIORITY_1); /// no need
+		mpush_service_create(TASK_PRIORITY_1); 
 		authorize_service_create(TASK_PRIORITY_1);
 
 		//wifi_manage_create(TASK_PRIORITY_1);
 		yt_dcl_start();
+		
+		DEBUG_LOGE(LOG_TAG, "after exit magic");
+		memory_info();
 		
 		duer::YTMediaManager::instance().play_data(YT_DB_EXIT_MAGIC_VOICE,sizeof(YT_DB_EXIT_MAGIC_VOICE), duer::MEDIA_FLAG_PROMPT_TONE);
 	}

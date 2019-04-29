@@ -20,6 +20,8 @@
 
 #define LOG_TAG "memory"
 
+#define MEMORY_INFO_DEBUG_ENABLE 1
+
 void *memory_malloc(const uint32_t mem_size)
 {
 	return malloc(mem_size);
@@ -35,8 +37,10 @@ void memory_free(const void *mem_addr)
 
 void memory_info(void)
 {
+#if MEMORY_INFO_DEBUG_ENABLE
 	__heapstats((__heapprt)fprintf,stderr);
     __heapvalid((__heapprt) fprintf, stderr, 1);
+#endif	
 	return;
 }
 

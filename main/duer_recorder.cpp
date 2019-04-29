@@ -13,9 +13,19 @@
 #include "amr_codec_cns.h"
 #include "yt_vad_rda_interface.h"
 
+#include "task_thread_interface.h"
+
 namespace duer {
+
+#define USE_DYNAMIC_THREAD 1
+
+#if !USE_DYNAMIC_THREAD
 static rtos::Thread duer_rec_thread(osPriorityAboveNormal, DEFAULT_STACK_SIZE);
 static rtos::Thread duer_amr_thread(osPriorityNormal, DEFAULT_STACK_SIZE * 1);
+#else
+static rtos::Thread *duer_rec_thread = NULL;
+static rtos::Thread *duer_amr_thread = NULL;
+#endif
 
 enum _duer_record_state {
     DUER_REC_STOPPING,
@@ -30,12 +40,29 @@ static Ringbuff rb(REC_FRAME_SIZE, 4);
 static _duer_record_state _state = DUER_REC_STOPPED;
 
 //amr_decoder
+
+
+
 #ifndef DISABLE_LOCAL_VAD
 static void *pDecoderState;
 static void *pInstance;
 
+
+
+#define USE_DYNAMIC_VAD 0
+#define USE_DYNAMIC_AMR 0
+
+#if !USE_DYNAMIC_AMR
 static char pBufferForDecoder[YT_NB_AMR_DECODER_SIZE_IN_BYTE];
+#else
+static char *pBufferForDecoder=NULL;
+#endif
+
+#if !USE_DYNAMIC_VAD
 static char pBufferForVAD[YT_VAD_8000_MEMORY_SIZE];
+#else
+static char *pBufferForVAD=NULL;
+#endif
 
 static short pOutFrame[160];
 //static char pStartFrame[REC_FRAME_SIZE];
@@ -56,18 +83,72 @@ const char amr_head[] =  "#!AMR\n";
 
 bool duer_recorder_is_busy()
 {
+#if !USE_DYNAMIC_THREAD
 	return (duer_amr_thread.get_state() == Thread::Deleted) ? false : true;
+#else
+	if(_state != DUER_REC_STOPPED) return true;
+	if(NULL == duer_amr_thread || duer_amr_thread->get_state() == Thread::Deleted) return false;
+	else return true;
+#endif
+}
+
+bool duer_recorder_is_start()
+{
+#if !USE_DYNAMIC_THREAD
+	return (duer_amr_thread.get_state() == Thread::Running) ? false : true;
+#else
+	if(NULL == duer_amr_thread || duer_amr_thread->get_state() == Thread::Running) return false;
+	else return true;
+#endif
 }
 
 void duer_recorder_amr_init_decoder(void **handler)
 {
+#if !USE_DYNAMIC_AMR
 	*handler = YT_NB_AMR_InitDecoder(pBufferForDecoder,YT_NB_AMR_DECODER_SIZE_IN_BYTE);
+#else
+	if(pBufferForDecoder == NULL)
+	{
+		pBufferForDecoder =(char *) malloc(YT_NB_AMR_DECODER_SIZE_IN_BYTE);
+	}
+	if(pBufferForDecoder)
+	{
+		*handler = YT_NB_AMR_InitDecoder(pBufferForDecoder,YT_NB_AMR_DECODER_SIZE_IN_BYTE);
+	}
+#endif
 }
 
 
 void duer_recorder_reinit()
 {
+#if USE_DYNAMIC_VAD
+	if(pBufferForVAD != NULL)
+	{
+		free(pBufferForVAD);
+		pBufferForVAD = NULL;
+	}
+#endif
 
+#if USE_DYNAMIC_AMR
+	if(pBufferForDecoder != NULL)
+	{
+		free(pBufferForDecoder);
+		pBufferForDecoder = NULL;
+	}
+#endif
+
+#if USE_DYNAMIC_THREAD
+	if(duer_amr_thread)
+	{
+		task_thread_exit(duer_amr_thread);	
+		duer_amr_thread = NULL;
+	}
+	if(duer_rec_thread)
+	{
+		task_thread_exit(duer_rec_thread);
+		duer_rec_thread = NULL;
+	}
+#endif
 }
 
 static void duer_recorder_on_start()
@@ -83,8 +164,20 @@ static void duer_recorder_on_start()
 			}
 		
 			DUER_LOGI("vad mode");	
+		#if USE_DYNAMIC_VAD
+			DUER_LOGI("pBufferForVAD : [%x]",pBufferForVAD);
+			if(pBufferForVAD == NULL)
+			{
+				pBufferForVAD =(char *) malloc(YT_VAD_8000_MEMORY_SIZE);
+			}
+			if(pBufferForVAD)
+			{
+				DUER_LOGI("pBufferForVAD malloc success");
+				yt_vad_rda_8000_set_memory_buffer(pBufferForVAD,YT_VAD_8000_MEMORY_SIZE);
+			}
+		#else		
 			yt_vad_rda_8000_set_memory_buffer(pBufferForVAD,YT_VAD_8000_MEMORY_SIZE);
-
+		#endif
 			pInstance = yt_vad_rda_8000_get_instance();
 			yt_vad_rda_8000_initialize(pInstance, 8000);
 			yt_vad_rda_8000_start_session(pInstance);			
@@ -243,6 +336,23 @@ static void duer_recorder_on_stop()
 		YT_NB_AMR_FreeDecoder(&pDecoderState);
 		yt_vad_rda_8000_close_session(pInstance);
 	}
+
+	#if USE_DYNAMIC_VAD
+		if(pBufferForVAD != NULL)
+		{
+			DUER_LOGI("pBufferForVAD Free");
+			free(pBufferForVAD);
+			pBufferForVAD = NULL;
+		}
+	#endif 
+	#if USE_DYNAMIC_AMR
+		if(pBufferForDecoder != NULL)
+		{
+			DUER_LOGI("pBufferForDecoder Free");
+			free(pBufferForDecoder);
+			pBufferForDecoder = NULL;
+		}
+	#endif
 #endif
 	
 	deepbrain::yt_dcl_rec_on_stop();
@@ -253,8 +363,16 @@ static void duer_amr_thread_main()
 	unsigned int nOffset,nSampleNumber;
 	char *data = NULL;
 	unsigned int size = 0;
+
+	DUER_LOGI("duer_amr_thread_main start");
 	
 	duer_recorder_on_start();
+	
+#if !USE_DYNAMIC_THREAD
+	duer_amr_thread.signal_wait(0x01);
+#else
+	duer_amr_thread->signal_wait(0x01);
+#endif
 
 	while(_state == DUER_REC_STARTED)
 	{
@@ -273,9 +391,11 @@ static void duer_amr_thread_main()
 			rb.read_done();
 		}
 	}
-
+#if !USE_DYNAMIC_THREAD
 	while(duer_rec_thread.get_state() != Thread::Deleted);
-	
+#else
+	while(duer_rec_thread->get_state() != Thread::Deleted);
+#endif
 	duer_recorder_on_stop();
 }
 
@@ -294,7 +414,11 @@ static void duer_rec_thread_main()
 	//data = flame_data;
 	rb.get_writePtr(&data);
     p_cur = data;
-
+#if !USE_DYNAMIC_THREAD
+	duer_amr_thread.signal_set(0x01);
+#else
+	duer_amr_thread->signal_set(0x01);
+#endif
 	//memcpy(p_cur, amr_head, strlen(amr_head));
 	//p_cur += strlen(amr_head);
 	
@@ -313,34 +437,8 @@ static void duer_rec_thread_main()
         }
         p_cur += rs;
     }
-	
-    //if (p_cur - data > 0) {
-    //    duer_recorder_on_data(data, p_cur - data);
-    //}
-
 exit:
 	YTMediaManager::instance().rec_stop();
-
-#if 0
-			char *writePtr = REC_BUFF_1;
-			char *readPtr = NULL;	
-		
-			_state = DUER_REC_STARTED;
-			DUER_LOGI("duer_rec_thread_main start");
-			duer_recorder_on_start();
-			
-			while(_state == DUER_REC_STARTED)
-			{
-				YTMediaManager::instance().rec_read_data(writePtr, REC_FRAME_SIZE); 		
-				if(readPtr) 
-					duer_recorder_on_data(readPtr, REC_FRAME_SIZE);
-					
-				readPtr = writePtr;
-				writePtr = (writePtr == REC_BUFF_1) ? REC_BUFF_2 : REC_BUFF_1;
-			}
-#endif
-
-	//duer_recorder_on_stop();
 	_state = DUER_REC_STOPPED;
 }
 
@@ -370,9 +468,40 @@ void duer_recorder_start()
 	_state = DUER_REC_STARTING;	
 	
 	YTMediaManager::instance().rec_start();
-	
+
+#if USE_DYNAMIC_THREAD
+	if(NULL == duer_amr_thread)
+	{
+		duer_amr_thread =(rtos::Thread *) task_thread_create(duer_amr_thread_main,
+							"",
+							DEFAULT_STACK_SIZE,
+							NULL,
+							osPriorityNormal);
+		DUER_LOGI("duer_amr_thread:[%x]",duer_amr_thread);
+	}
+	else
+	{
+		DUER_LOGI("duer_amr_thread:[%x]",duer_amr_thread);
+		duer_amr_thread->start(duer_amr_thread_main);
+	}
+	if(NULL == duer_rec_thread)
+	{
+		duer_rec_thread =(rtos::Thread *) task_thread_create(duer_rec_thread_main,
+						"",
+						DEFAULT_STACK_SIZE,
+						NULL,
+						osPriorityAboveNormal);
+		DUER_LOGI("duer_rec_thread:[%x]",duer_rec_thread);
+	}
+	else
+	{
+		DUER_LOGI("duer_rec_thread:[%x]",duer_rec_thread);
+		duer_rec_thread->start(duer_rec_thread_main);
+	}
+#else	
 	duer_amr_thread.start(&duer_amr_thread_main);
 	duer_rec_thread.start(&duer_rec_thread_main);
+#endif
 }
 
 }

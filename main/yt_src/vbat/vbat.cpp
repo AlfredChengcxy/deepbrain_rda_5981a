@@ -23,7 +23,8 @@
 ////kaifaban
 AnalogIn ain(ADC_PIN0);
 
-static Thread s_vbat_thread(osPriorityHigh, 1024);
+//static Thread s_vbat_thread(osPriorityHigh, 1024);//// 在 a 版本上 会出现从魔音出来重新创线程 造成播音卡顿
+static Thread s_vbat_thread(osPriorityNormal, 1024);
 
 const unsigned int vbat_low_power_alert_times = 5*60*1000; 
 const unsigned int low_power_max_cnt = 5; 
