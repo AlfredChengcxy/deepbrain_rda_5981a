@@ -129,6 +129,9 @@ void yt_voice_set_wave_head(char *wavHeader)
 
 int yt_voice_change_init(char *data, int size)
 {
+	DUER_LOGE("yt_voice_change_init");
+	//memory_info();
+
 	duer_recorder_amr_init_decoder(&pDecoderState);
 	
 	if(!pDecoderState)
@@ -136,7 +139,6 @@ int yt_voice_change_init(char *data, int size)
 		DUER_LOGE("pDecoderState NULL");
 		return -1;
 	}
-
 
 
 #if USE_LJ_MAGIC //TERENCE---2019/03/05
@@ -149,8 +151,7 @@ int yt_voice_change_init(char *data, int size)
 	if(NULL == pVoiceChanger)
 	{		
 		if(pDecoderState)
-			YT_NB_AMR_FreeDecoder(&pDecoderState);
-		
+			YT_NB_AMR_FreeDecoder(&pDecoderState);	
 		DUER_LOGE("pVoiceChanger NULL");
 		return -1;
 	}
@@ -253,26 +254,29 @@ void yt_voice_change_free()
 {
 	DUER_LOGE("yt_voice_change_free");
 #if USE_LJ_MAGIC
-	YT_MV_FreeChanger(pVoiceChanger);
-	pVoiceChanger = NULL;
-
+	if(pVoiceChanger)
+	{
+		DUER_LOGE("YT_MV_FreeChanger");
+		
+		YT_MV_FreeChanger(pVoiceChanger);
+		
+		pVoiceChanger = NULL;	
+	}
 	if(pDecoderState)
 	{
 		DUER_LOGE("YT_NB_AMR_FreeDecoder");
 		YT_NB_AMR_FreeDecoder(&pDecoderState);
+		pDecoderState = NULL;
 	}
+	//memory_info();
 #elif USE_YT_MAGIC
 	if(NULL != GLOBAL_pBufferForVoiceChanger)
 	{
 		memory_free(GLOBAL_pBufferForVoiceChanger);
 		GLOBAL_pBufferForVoiceChanger = NULL;		
-	}
-	
-		
-	 YT_MV_222_FreeChanger(pVoiceChanger);
-	
+	}	
+	YT_MV_222_FreeChanger(pVoiceChanger);
 	pVoiceChanger = NULL;
-	
 	if(pDecoderState)
 		YT_NB_AMR_FreeDecoder(&pDecoderState);
 #endif

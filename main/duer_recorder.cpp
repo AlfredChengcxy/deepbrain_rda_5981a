@@ -44,8 +44,8 @@ static _duer_record_state _state = DUER_REC_STOPPED;
 
 
 #ifndef DISABLE_LOCAL_VAD
-static void *pDecoderState;
-static void *pInstance;
+static void *pDecoderState = NULL;
+static void *pInstance = NULL;
 
 
 
@@ -105,6 +105,11 @@ bool duer_recorder_is_start()
 void duer_recorder_amr_init_decoder(void **handler)
 {
 #if !USE_DYNAMIC_AMR
+	if(*handler !=NULL) 
+	{
+		DUER_LOGE("*handler != NULL");
+		return ;
+	}
 	*handler = YT_NB_AMR_InitDecoder(pBufferForDecoder,YT_NB_AMR_DECODER_SIZE_IN_BYTE);
 #else
 	if(pBufferForDecoder == NULL)

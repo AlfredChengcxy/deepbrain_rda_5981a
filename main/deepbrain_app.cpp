@@ -635,7 +635,7 @@ void yt_dcl_rec_on_stop()
 			
 		case DEEPBRAIN_MODE_MAGIC_VOICE:
 			if(dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE) {
-			#if 0
+			#if 1
 				if(bExitMagicData == true) 
 				{
 					DUER_LOGE("bExitMagicData == true so exit");
@@ -819,6 +819,12 @@ void magic_voice_start()
 			rtos::Thread::wait(10);
 		}	
 	#endif
+	
+		if(magic_amrnb_data)
+		{	DEBUG_LOGE(LOG_TAG, "memory_free magic_amrnb_data");
+			memory_free(magic_amrnb_data);
+		}	
+		magic_amrnb_data = NULL;
 
 		DEBUG_LOGE(LOG_TAG, "before exit magic");
 		memory_info();
