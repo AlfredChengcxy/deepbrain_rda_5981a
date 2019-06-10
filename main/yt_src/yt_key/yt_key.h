@@ -42,6 +42,7 @@ public:
 		 longpress(Callback<void()>(obj, method), time,type);
 	}
 
+
 	void key_fall();	
 	void key_rise();
 	
@@ -53,9 +54,10 @@ public:
 	static Callback<void()> _fall[PAD_KEY_NUM];
 	static Callback<void()> _rise[PAD_KEY_NUM];
 	static Callback<void()> _longpress[PAD_KEY_NUM];
-	
+
 private:
 
+	
 	mbed::GpadcKey  _key;
 	uint8_t   _idx;
 };

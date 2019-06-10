@@ -10,7 +10,7 @@
 
 #include "rda5991h_wland.h"
 
-#if 1 ///5981a
+#if 0 ///5981a
 // Initialize RDA FLASH
 #define RDA_FLASH_SIZE                  0x00100000   // Flash Size
 #define RDA_SYS_DATA_ADDR               0x180F6000 // System Data Area, fixed size 4KB
@@ -22,6 +22,5 @@
 #define RDA_USER_DATA_ADDR              0x183ED000 // User Data Area start address
 #define RDA_USER_DATA_LENG              0x3000     // User Data Area Length
 #endif
-
 
 #endif //BAIDU_IOT_TINYDU_DEMO_DUER_RDA_FLASH_H

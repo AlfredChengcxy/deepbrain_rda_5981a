@@ -35,6 +35,7 @@ public:
 	int bt_volup();
 	int bt_voldown();
 	int bt_getA2dpstatus(int *status);
+	int bt_setname(const unsigned char* name);
 	
     int start_play(MediaType type, int bitrate);
 
@@ -70,7 +71,8 @@ protected:
 	virtual int on_bt_volup() = 0;
 	virtual int on_bt_voldown() = 0;
 	virtual int on_bt_getA2dpstatus(int *status) = 0;
-
+	virtual int on_SetName(const unsigned char* name) = 0;
+	
     virtual int on_start_play(MediaType type, int bitrate) = 0;
 
     virtual int on_write(const void* data, size_t size) = 0;

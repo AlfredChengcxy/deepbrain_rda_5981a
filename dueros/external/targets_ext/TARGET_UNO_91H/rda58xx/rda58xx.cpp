@@ -691,6 +691,26 @@ rda58xx_at_status rda58xx::setBtBrMode(void)
     return _at_status;
 }
 
+
+rda58xx_at_status rda58xx::SetName(const unsigned char* name)
+{
+    char cmd[60] ={0};
+
+    sprintf(cmd, "AT+BTSETLNAME=%s\r\n", name);
+    _at_status = NACK;
+    _with_parameter = false;
+    _rx_idx = 0;
+    core_util_critical_section_enter();
+    _serial->puts((const char *)cmd);
+    _ats++;
+    core_util_critical_section_exit();
+    _rxsem.wait(TIMEOUT_MS);
+    _atr = _ats;
+
+    return _at_status;
+}
+
+
 rda58xx_at_status rda58xx::setBtLeMode(void)
 {
     // Send AT CMD: BT_LE_MODE
@@ -872,23 +892,6 @@ rda58xx_at_status rda58xx::SetAddr(const unsigned char* addr)
 }
 
 
-rda58xx_at_status rda58xx::SetName(const unsigned char* name)
-{
-    char cmd[60] ={0};
-
-    sprintf(cmd, "AT+BTSETLNAME=%s\r\n", name);
-    _at_status = NACK;
-    _with_parameter = false;
-    _rx_idx = 0;
-    core_util_critical_section_enter();
-    _serial->puts((const char *)cmd);
-    _ats++;
-    core_util_critical_section_exit();
-    _rxsem.wait(TIMEOUT_MS);
-    _atr = _ats;
-
-    return _at_status;
-}
 
 
 rda58xx_at_status rda58xx::leSetFeature(const char* features)

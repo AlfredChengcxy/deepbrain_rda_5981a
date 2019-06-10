@@ -17,17 +17,19 @@
 
 /// 开发板 用这个可能会造成死机
 // other 
-//AnalogIn ain(ADC_PIN2);
+AnalogIn ain(ADC_PIN2);
 
 
 ////kaifaban
-AnalogIn ain(ADC_PIN0);
+//AnalogIn ain(ADC_PIN0);
 
 //static Thread s_vbat_thread(osPriorityHigh, 1024);
-static Thread s_vbat_thread(osPriorityNormal, 1024);
+static Thread s_vbat_thread(osPriorityNormal, 1024 * 2);
 
 const unsigned int vbat_low_power_alert_times = 5*60*1000; 
 const unsigned int low_power_max_cnt = 5; 
+
+const int low_val = /*610*/510;
 
 static bool bVbatRun=true;
 static VBAT_SCENE _vbat_status = VBAT_FULL;
@@ -71,7 +73,7 @@ bool vbat_check_startup()
 {
 	unsigned short _ival = ain.read_u16();
 	
-	if(_ival < 610)//3.65v
+	if(_ival < low_val)//3.65v
 	{
 		_vbat_status = VBAT_SHUTDOWN;					
 		duer::YTMediaManager::instance().play_shutdown(YT_DB_LOW_BAT,sizeof(YT_DB_LOW_BAT));
@@ -118,7 +120,7 @@ static void vbat_check()
 			_ival = get_vbat_avg();			
 			LOG("[vbat] ival:%d states:%d",_ival ,_vbat_status);
 #if 1
-			if(_ival < 610)//3.55v
+			if(_ival < low_val)//3.55v
 			{	
 				lowPowerCnt++;
 				if(lowPowerCnt > low_power_max_cnt) {

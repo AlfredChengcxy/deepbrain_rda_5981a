@@ -35,9 +35,9 @@ def pack_image(filename, version, firmware_addr, bootaddr):
 
     fname = os.path.splitext(filename)
 
-    print 'firmware:', filename
+    print ('firmware:', filename)
 
-    f = file(filename, 'rb')
+    f = open(filename, 'rb')
     data = f.read()
     f.close()
 
@@ -50,26 +50,24 @@ def pack_image(filename, version, firmware_addr, bootaddr):
     crc32 = zlib.crc32(data, 0) & 0xFFFFFFFF
     crc32 ^= 0xFFFFFFFF
     size = len(data)
-    print '    size:', size
-    print '   version:', version
-    print '   crc32: %08x' % crc32
+    print ('    size:', size)
+    print ('   version:', version)
+    print ('   crc32: %08x' % crc32)
 
     if bootaddr >= 0x18001000 and bootaddr < 0x18400000:
-    	print 'bootaddr:%08x' % bootaddr
+    	print ('bootaddr:%08x' % bootaddr)
     else:
-    	print 'bootaddr(%08x) is invalid, or no input, disable it' % bootaddr
+    	print ('bootaddr(%08x) is invalid, or no input, disable it' % bootaddr)
     	bootaddr = 0
-
-    header = struct.pack("L24sLLLLL4048s", firmware_magic, version, firmware_addr, size, crc32, bootaddr, firmware_magic, '\0')
-
-    f = file(fname[0] + '_fwpacked.bin', "wb")
+    header = struct.pack("L24sLLLLL4048s", firmware_magic, bytes(version.encode('utf-8')), firmware_addr, size, crc32, bootaddr, firmware_magic, bytes('\0'.encode('utf-8')))
+    f = open(fname[0] + '_fwpacked.bin', "wb")
     f.write(header)
     f.write(data)
     f.close()
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:
-        print sys.argv[0], "filename"
+        print (sys.argv[0], "filename")
         exit(0)
     if len(sys.argv) == 5:
     	pack_image(sys.argv[1], sys.argv[2], int(sys.argv[3],16), int(sys.argv[4],16))

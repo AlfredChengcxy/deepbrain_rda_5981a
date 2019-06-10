@@ -18,7 +18,7 @@
 #include <limits.h>
 
 #include "app_framework.h"
-
+#include "YTLocal.h"
 
 extern void vbat_sleep();
 
@@ -44,13 +44,7 @@ static duer_qcache_handler s_wchat_queue;
 static duer_mutex_t s_wchat_queue_lock;
 
 
-void PwmTime(void const *argument);
 
-static mbed::PwmOut s_motor(GPIO_PIN22);
-static rtos::RtosTimer rtPwm(PwmTime,osTimerOnce,NULL);
-
-//static mbed::PwmOut *s_motor = NULL;
-//static mbed::DigitalOut GPIO_MOTOR(GPIO_PIN22,1);
 
 class YTMDMPlayerListener : public MediaPlayerListener {
 public:
@@ -66,15 +60,12 @@ static YTMDMPlayerListener s_mdm_media_listener;
 
 #if 0
 #define AIRKISS_TIMEOUT_SLEEP 1000*60*10
-
 void AirkissTimeOutSleep(void const *argument)
 {
 	DUER_LOGI( "AirkissTimeOutSleep");	
 	// add  aoto_sleep code here	
-
 /// 解决休眠后重复不断的播报 休眠的语音
 	media_play_unregister_listener(&s_mdm_media_listener);
-	
 	duer::YTMediaManager::instance().play_data(YT_SLEEP,sizeof(YT_SLEEP), MEDIA_FLAG_SPEECH|!MEDIA_FLAG_SAVE_PREVIOUS);
 #if 0
 	while(duer::YTMediaManager::instance().get_media_status() != MEDIA_PLAYER_IDLE) 
@@ -82,16 +73,23 @@ void AirkissTimeOutSleep(void const *argument)
 		   Thread::wait(50);
 	}
 #endif
-
-
 	app_send_message(APP_MAIN_NAME, APP_MSG_TO_ALL, APP_EVENT_DEFAULT_EXIT, NULL, 0);
 	vbat_sleep();
-	duer::event_trigger(duer::EVT_STOP);
-	
+	duer::event_trigger(duer::EVT_STOP);	
 }
-
 rtos::RtosTimer rtAirkissSleep(AirkissTimeOutSleep,osTimerOnce,NULL);
 #endif
+
+#define USE_PWM_MACHINE_FOR_ZXP 0
+#define USE_PWM_MACHINE_FOR_KMT 1 //// 开发板开这个会重启
+
+
+#if USE_PWM_MACHINE_FOR_ZXP
+void PwmTime(void const *argument);
+static mbed::PwmOut s_motor(GPIO_PIN22);
+static rtos::RtosTimer rtPwm(PwmTime,osTimerOnce,NULL);
+//static mbed::PwmOut *s_motor = NULL;
+//static mbed::DigitalOut GPIO_MOTOR(GPIO_PIN22,1);
 
 #define PWM_TIME_PERIODIC 200
 int nTime = 0;
@@ -162,12 +160,104 @@ void PwmTime(void const *argument)
 	
 	s_motor.write(gPwm); 
 	rtPwm.start(PWM_TIME_PERIODIC);
+}
+#endif
 
 
+
+
+#if USE_PWM_MACHINE_FOR_KMT///// 机器狗
+void rtMotorRun(void const *argument);
+
+
+#if 0
+static mbed::DigitalOut s_motor_pin1(GPIO_PIN3);
+static mbed::DigitalOut s_motor_pin2(GPIO_PIN25);
+#else
+static mbed::DigitalOut s_motor_pin1(GPIO_PIN0);
+static mbed::DigitalOut s_motor_pin2(GPIO_PIN9);
+#endif
+
+static rtos::RtosTimer rtMotor(rtMotorRun,osTimerOnce,NULL);
+int nStep = 0;
+
+void rtMotorRun(void const *argument)
+{
+	unsigned int _delay = 0;
+
+	switch(nStep)	
+	{
+		case 0:
+			s_motor_pin1 = 1;
+			s_motor_pin2 = 0;
+			_delay = 1000;
+			nStep = 1;
+			break;
+
+		case 1:
+			s_motor_pin1 = 1;
+			s_motor_pin2 = 1;
+			_delay = 400;
+			nStep = 2;
+			break;
+
+		case 2:
+			s_motor_pin1 = 0;
+			s_motor_pin2 = 1;
+			_delay = 2000;
+			nStep = 3;
+			break;
+
+		case 3:
+			s_motor_pin1 = 1;
+			s_motor_pin2 = 1;
+			_delay = 400;
+			nStep = 0;
+			break;
+	}
+
+	rtMotor.start(_delay);
 }
 
+#endif
 
 
+static bool bEnable = true;
+
+void set_status(bool _enable)
+{
+	bEnable = _enable;
+}
+
+bool get_status()
+{
+	return bEnable;
+}
+
+void stop_pwm_machine()
+{
+#if USE_PWM_MACHINE_FOR_KMT
+	if(!bEnable)return;
+	s_motor_pin1 = 1;
+	s_motor_pin2 = 1;
+	rtMotor.stop();	
+#elif USE_PWM_MACHINE_FOR_ZXP
+
+#endif
+}
+
+void start_pwm_machine()
+{
+#if USE_PWM_MACHINE_FOR_KMT
+	if(!bEnable)return;
+	s_motor_pin1 = 1;
+	s_motor_pin2 = 1;
+	nStep = 0;
+	rtMotorRun(NULL);
+#elif USE_PWM_MACHINE_FOR_ZXP
+
+#endif	
+}
 
 int YTMDMPlayerListener::on_start(int flags)
 {
@@ -176,29 +266,50 @@ int YTMDMPlayerListener::on_start(int flags)
 	DUER_LOGI("YTMDMPlayerListener : on_start");
 
 	DUER_LOGI("%d",flags & MEDIA_FLAG_DCS_URL);
-
+#if USE_PWM_MACHINE_FOR_ZXP
 	gflags = flags;
-	
-	if (flags & MEDIA_FLAG_DCS_URL ) 
+#endif	
+	if (flags & MEDIA_FLAG_DCS_URL || flags &MEDIA_FLAG_SPI_DATA ) 
 	{	
+	#if USE_PWM_MACHINE_FOR_ZXP
 		gPwm = 0.00f;//0.3	  
 		nTime = 0;
 		nStep = 0;
 		bRun = true;
 		bRun1 = true;
 		rtPwm.start(2000);
+	#endif
+	
+	#if USE_PWM_MACHINE_FOR_KMT
+		if(bEnable)
+		{
+			s_motor_pin1 = 1;
+			s_motor_pin2 = 1;
+			nStep = 0;
+			rtMotorRun(NULL);
+		}
+	#endif	
 	}
 	else if(flags & MEDIA_FLAG_MAGIC_VOICE) {
+	#if USE_PWM_MACHINE_FOR_ZXP	
 		gPwm = 0.00f;//0.3	  
 		nTime = 0;
 		nStep = 0;
 		bRun = true;
 		bRun1 = true;
 		rtPwm.start(800);
+	#endif
+	
+	#if USE_PWM_MACHINE_FOR_KMT
+		if(bEnable)
+		{
+			s_motor_pin1 = 1;
+			s_motor_pin2 = 1;			
+			nStep = 0;
+			rtMotorRun(NULL);
+		}
+	#endif	
 	}
-
-
-
 
     return 0;
 }
@@ -212,32 +323,24 @@ int YTMDMPlayerListener::on_stop(int flags)
 	YTLED::instance().disp_led(LED_IDLE);
 #endif	
 
-#if 1
-	#if 1
+#if USE_PWM_MACHINE_FOR_ZXP
 	s_motor = 1;
 	float val = s_motor.read();
 	DUER_LOGI("%f",val);
-	#endif
-	#if 0
-	  gpio_t gpio;
-	  gpio_init(&gpio,GPIO_PIN22);
-	  gpio_dir(&gpio, PIN_OUTPUT);
-	  gpio_write(&gpio,1);	  
-	#endif
-    #if 0
-	  GPIO_MOTOR=1;
-	#endif
-
-#endif
-
-#if 1
 	bRun = false;
 	bRun1 = false;
-
 	nStep = 0;
 	rtPwm.stop();
 #endif
 
+#if USE_PWM_MACHINE_FOR_KMT
+	if(bEnable)
+	{
+		s_motor_pin1 = 1;
+		s_motor_pin2 = 1;
+		rtMotor.stop();
+	}
+#endif
 
 	if(flags & duer::MEDIA_FLAG_NO_POWER_TONE){
 		YTLED::instance().disp_led(LED_SHUTDOWN);
@@ -258,64 +361,84 @@ int YTMDMPlayerListener::on_finish(int flags)
 	YTLED::instance().disp_led(LED_IDLE);
 #endif
 
-#if 1//def YTMOTOR
-	#if 1
+#if USE_PWM_MACHINE_FOR_ZXP
 	s_motor = 1;
 	float val = s_motor.read();
 	DUER_LOGI("%f",val);
-	#else
-	  gpio_t gpio;
-	  gpio_init(&gpio,GPIO_PIN22);
-	  gpio_dir(&gpio, PIN_OUTPUT);
-	  gpio_write(&gpio,1);
-	 #endif
-  
-#endif
-
-
-#if 1
 	nStep = 0;
 	bRun = false;
 	bRun1 = false;
 	rtPwm.stop();
 #endif
 
-
-
-	if(deepbrain::is_magic_voice_mode())
+#if USE_PWM_MACHINE_FOR_KMT
+	if(bEnable)
 	{
-		event_trigger(EVT_KEY_START_RECORD);
+		s_motor_pin1 = 1;
+		s_motor_pin2 = 1;
+		rtMotor.stop();
 	}
-	else if (flags & MEDIA_FLAG_SPEECH || flags & MEDIA_FLAG_DCS_URL) {	
-	#if 0	
-		YTMediaManager::instance().play_queue();
-	#else
-		YTMediaManager::instance().play_queue_v2(1);
-	#endif
-	}
-	else if(flags & MEDIA_FLAG_WCHAT) {
-		YTMediaManager::instance().play_wchat_queue();
-	}
-	else if(flags & duer::MEDIA_FLAG_URL_CHAT){
-		event_trigger(EVT_KEY_REC_PRESS);
-	}
-	else if(flags & duer::MEDIA_FLAG_RECORD_TONE){
-		event_trigger(EVT_KEY_START_RECORD);
-	}
-	else if(flags & duer::MEDIA_FLAG_BT_TONE){
+#endif
+
+	//// 优先处理
+	if(flags & duer::MEDIA_FLAG_BT_MODE)
+	{
 		event_trigger(EVT_KEY_ENTER_BT);
 	}
-	else if(flags & duer::MEDIA_FLAG_NO_POWER_TONE){
-		YTLED::instance().disp_led(LED_SHUTDOWN);
-		//event_trigger(EVT_SHUTDOWN);
+	else if(flags & duer::MEDIA_FLAG_WIFI_MODE)
+	{
+		
 	}
-	else if(flags & duer::MEDIA_FLAG_PROMPT_TONE){
-		if(flags & duer::MEDIA_FLAG_SAVE_PREVIOUS)
+	else if(flags & duer::MEDIA_FLAG_MAGIC_MODE)
+	{
+		event_trigger(EVT_KEY_START_RECORD);
+	}	
+	else if(flags & duer::MEDIA_FLAG_LOCAL_MODE)
+	{
+	#if 0
+		char path[64];
+		PlayLocal::instance().getNextFilePath(path);
+		YTMediaManager::instance().play_local(path,MEDIA_FLAG_LOCAL | duer::MEDIA_FLAG_LOCAL_MODE);
+	#else
+		duer::event_trigger(duer::EVT_KEY_PLAY_NEXT);
+	#endif
+	}
+	else
+	{
+		if(deepbrain::is_magic_voice_mode())
 		{
-			duer::YTMediaManager::instance().play_previous_media_continue();
+			event_trigger(EVT_KEY_START_RECORD);
 		}
+		else if (flags & MEDIA_FLAG_SPEECH || flags & MEDIA_FLAG_DCS_URL) {	
+		#if 0	
+			YTMediaManager::instance().play_queue();
+		#else
+			YTMediaManager::instance().play_queue_v2(1);
+		#endif
+		}
+		else if(flags & MEDIA_FLAG_WCHAT) {
+			YTMediaManager::instance().play_wchat_queue();
+		}
+		else if(flags & duer::MEDIA_FLAG_URL_CHAT){
+			event_trigger(EVT_KEY_REC_PRESS);
+		}
+		else if(flags & duer::MEDIA_FLAG_RECORD_TONE){
+			event_trigger(EVT_KEY_START_RECORD);
+		}
+		else if(flags & duer::MEDIA_FLAG_BT_TONE){
+			event_trigger(EVT_KEY_ENTER_BT);
+		}
+		else if(flags & duer::MEDIA_FLAG_NO_POWER_TONE){
+			YTLED::instance().disp_led(LED_SHUTDOWN);
+			//event_trigger(EVT_SHUTDOWN);
+		}
+		else if(flags & duer::MEDIA_FLAG_PROMPT_TONE){
+			if(flags & duer::MEDIA_FLAG_SAVE_PREVIOUS)
+			{
+				duer::YTMediaManager::instance().play_previous_media_continue();
+			}
+		}		
 	}
-
 #if 0//ADD_BY_LIJUN_1
 	rtAirkissSleep.start(AIRKISS_TIMEOUT_SLEEP);
 #endif	
@@ -412,7 +535,7 @@ int YTMediaManager::get_media_status()
 bool YTMediaManager::is_playing()
 {
 	MediaPlayerStatus status = MediaManager::instance().get_media_player_status();
-	//printf("status:%d\r\n",status);
+	//DUER_LOGI("status:%d",status);
 	return (status == MEDIA_PLAYER_PLAYING)?true:false;
 }
 
@@ -521,6 +644,7 @@ int YTMediaManager::set_wchat_queue(const char *url)
 
 int YTMediaManager::play_wchat_queue()
 {
+	int ret = 0;
     char *url = NULL;
 
 	duer_mutex_lock(s_wchat_queue_lock);
@@ -530,11 +654,12 @@ int YTMediaManager::play_wchat_queue()
 			DUER_LOGI("play_queue[%d]",duer_qcache_length(s_wchat_queue));
 			duer::YTMediaManager::instance().play_url(url, MEDIA_FLAG_WCHAT);
 			DUER_FREE(url);
+			ret =1;
 		}
 	}
 	duer_mutex_unlock(s_wchat_queue_lock);
 
-
+	return ret;
 #if 0	
 	if(qcache_len == 0)
 		play_queue();
@@ -707,6 +832,10 @@ void YTMediaManager::start_bt()
             return;
         }
     }
+
+#if USE_PWM_MACHINE_FOR_KMT
+	MediaManager::instance().set_bt_name("kemaite");
+#endif
 
 	MediaManager::instance().bt_mode();
 }

@@ -49,15 +49,18 @@
 #include "Rda_sleep_api.h"
 #include "SDMMCFileSystem.h"
 
-//#include "SDMMCFileSystem.h"
+
+
+#include "ytawake.h"
 
 #define LOG_TAG "main"
 
 
 /// ¿ª·¢°å
 //SDMMCFileSystem sd(PB_9, PB_0, PB_6, PB_7, PC_0, PC_1, "sd");/// ×¢Òâ PB_6 Óëvbat adcpin0 ³åÍ»
+SDMMCFileSystem sd(NC, NC, NC, NC, NC, NC, "sd");
 
-SDMMCFileSystem sd(GPIO_PIN9, GPIO_PIN0, GPIO_PIN3, NC, NC, NC, "sd");
+//SDMMCFileSystem sd(GPIO_PIN9, GPIO_PIN0, GPIO_PIN3, NC, NC, NC, "sd");
 
 APP_OBJECT_t *g_app_main = NULL;
 
@@ -115,6 +118,7 @@ void* get_network_interface(void)
 
 int main() 
 {
+	DEBUG_LOGI(LOG_TAG, "main");
 #if defined(TARGET_UNO_91H)	
     rda5981_set_flash_size(RDA_FLASH_SIZE);
     rda5981_set_user_data_addr(RDA_SYS_DATA_ADDR, RDA_USER_DATA_ADDR, RDA_USER_DATA_LENG);
@@ -139,7 +143,7 @@ int main()
     duer::MediaManager::instance().initialize();
 	duer::YTMediaManager::instance().init();
 
-    duer::YTMediaManager::instance().set_volume(10);	
+    duer::YTMediaManager::instance().set_volume(10/*duer::DEFAULT_VOLUME*/);	
 
 #if 0//chenjl add 20190317
 	if(vbat_check_startup())
@@ -181,6 +185,9 @@ int main()
 
 	//wifi manage
 	wifi_manage_create(TASK_PRIORITY_1);
+
+	/// need ytawake
+	//yt_awake_create(TASK_PRIORITY_1); 
 
 
 	//asr service create

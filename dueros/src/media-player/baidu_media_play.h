@@ -69,6 +69,7 @@ void media_bt_forward();
 void media_bt_backward();
 void media_bt_volup();
 void media_bt_voldown();
+void media_set_bt_name(const unsigned char* name);
 
 extern MediaPlayBuffer* g_media_play_buffer;
 

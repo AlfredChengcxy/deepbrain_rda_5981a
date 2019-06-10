@@ -71,7 +71,7 @@ public:
 
 	void start_bt();
 	void switch_bt(void);
-	
+	void set_bt_name(const unsigned char * name);
 private:
     static YTMediaManager s_instance;	
 };

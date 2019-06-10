@@ -186,6 +186,9 @@ public:
      */
     void register_play_failed_cb(mdm_media_play_failed_cb cb);
 
+
+void set_bt_name(const unsigned char * name);
+
 private:
     MediaManager();
 

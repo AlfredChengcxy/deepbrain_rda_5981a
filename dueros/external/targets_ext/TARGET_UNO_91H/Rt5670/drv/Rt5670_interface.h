@@ -2022,7 +2022,7 @@ typedef struct {
     AdcInput adcInput;
 } Rt5670Config;
 
-void FM36Init_no_dsp(void);
+
 
 int rt5670Init(Rt5670Config *cfg);
 int rt5670ConfigFmt(Rt5670I2sFmt cfg);
@@ -2062,8 +2062,6 @@ int rt5670_dsp_write(uint16_t addr, uint16_t data);
 int rt5670_dsp_read(uint16_t reg, uint16_t *pData);
 
 int rt5670Init2();
-int rt5670Init3();
-
 void rt5670ReadAll();
 
 

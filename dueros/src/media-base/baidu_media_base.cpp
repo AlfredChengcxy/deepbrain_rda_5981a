@@ -104,6 +104,15 @@ int MediaBase::bt_voldown() {
     return rs;
 }
 
+int MediaBase::bt_setname(const unsigned char* name) {
+    int rs = 0;
+    _s_lock.lock(osWaitForever);
+    rs = on_SetName(name);
+    _s_lock.unlock();
+    return rs;
+}
+
+
 int MediaBase::bt_getA2dpstatus(int *status){
     int rs = 0;
     _s_lock.lock(osWaitForever);

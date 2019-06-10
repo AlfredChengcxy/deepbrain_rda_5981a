@@ -640,4 +640,12 @@ void media_bt_voldown()
 	}
 }
 
+
+void media_set_bt_name(const unsigned char* name)
+{
+	s_media_adapter.bt_setname(name);
+}
+
+
+
 } // namespace duer

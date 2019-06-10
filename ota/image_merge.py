@@ -12,36 +12,36 @@ def full_empty(file,len):
 
 def merge_image(file1, offset1, file2, offset2, outfile):
     #fp1 = os.path.splitext(file1)
-    print 'file1:', file1
+    print ('file1:', file1)
     
-    f1 = file(file1, 'rb')
+    f1 = open(file1, 'rb')
     data1 = f1.read()
     f1.close()
     size1 = len(data1)
 
-    fout = file(outfile,"wb")
+    fout = open(outfile,"wb")
     fout.write(data1)
 
     fulllen = offset2-offset1-size1
     full_empty(fout,fulllen)
         
-    print 'file2:', file2
-    f2 = file(file2, 'rb')
+    print ('file2:', file2)
+    f2 = open(file2, 'rb')
     data2 = f2.read()
     f2.close()  
 
     fout.write(data2)
     fout.close()
 
-    print 'complete.'
+    print ('complete.')
 
 def merge_image_more(param):
-    print 'num:',len(param)
-    print 'argv:',param
+    print ('num:',len(param))
+    print ('argv:',param)
     
 if __name__ == "__main__":
     if len(sys.argv) < 6:
-        print sys.argv[0], "filename"
+        print (sys.argv[0], "filename")
         exit(0)
 
     if len(sys.argv) == 6:

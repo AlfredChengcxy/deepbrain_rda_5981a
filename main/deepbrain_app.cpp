@@ -24,10 +24,11 @@
 
 #include "airkiss_lan_discovery.h"
 #include "mpush_service.h"
-
+#include "YTLocal.h"
 
 #include "events.h"
 #include "Factory_test.h"
+#include "spilocal.h"
 
 //#include "YTDebug.h"
 
@@ -44,8 +45,9 @@
 
 
 
-#define ZXP_PCBA 1
+#define ZXP_PCBA 0
 #define HB_PCBA 0
+#define KMT_PCBA 1
 
 #if ZXP_PCBA
 static duer::YTGpadcKey s_talk_button(KEY_B3);
@@ -58,6 +60,10 @@ static duer::YTGpadcKey s_volume_down_button(KEY_B1);
 static duer::YTGpadcKey s_volume_up_button(KEY_B2);
 static duer::YTGpadcKey s_wifi_bt_button(KEY_B3);
 static duer::YTGpadcKey s_play_pause_button(KEY_B0);
+#elif KMT_PCBA
+static duer::YTGpadcKey s_button3(KEY_B3);// long (bt /开关动作) 	short (play_local)    	3号键
+static duer::YTGpadcKey s_button4(KEY_B4);// long (wechat)			short (chat)			4号键
+static duer::YTGpadcKey s_button2(KEY_B2);// long (magic)			short (volume ctl /play wechat)	2号键
 #endif
 
 
@@ -79,6 +85,16 @@ static const char amr_head[] =  "#!AMR\n";
 extern bool bIsConnectedOnce;
 extern bool bExitMagicData ;
 extern bool bExitMagicDatav1 ;
+
+namespace duer
+{
+extern void stop_pwm_machine();
+extern void start_pwm_machine();
+extern bool get_status();
+extern void set_status(bool _enable);
+}
+
+
 
 namespace deepbrain {
 
@@ -631,6 +647,11 @@ void yt_dcl_rec_on_stop()
 			handler = NULL;
 		#endif
 			duer::YTMediaManager::instance().play_data(YT_WECHAT_SEND,sizeof(YT_WECHAT_SEND), duer::MEDIA_FLAG_SPEECH); 	
+
+////////////////////////add(结束后 自动恢复到asr模式)
+#if KMT_PCBA
+	dcl_mode = DEEPBRAIN_MODE_ASR;
+#endif		
 			break;
 			
 		case DEEPBRAIN_MODE_MAGIC_VOICE:
@@ -666,6 +687,7 @@ void stop_recorder()
 
 void talk_start()
 {
+	DEBUG_LOGI(LOG_TAG, "talk_start");
 	if(!youngtone_is_authorized())
 		return;
 
@@ -713,6 +735,7 @@ void talk_stop()
 
 void mchat_start()
 {	
+	DEBUG_LOGI(LOG_TAG, "mchat_start");
 	if(!youngtone_is_authorized())
 		return;
 		
@@ -772,79 +795,62 @@ void magic_voice_start()
 	dcl_mode = (dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE)	? DEEPBRAIN_MODE_ASR : DEEPBRAIN_MODE_MAGIC_VOICE;
 
 	if(dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE) {
+		
 		DEBUG_LOGE(LOG_TAG, "before enter magic");
 		memory_info();
-
-		
 		rec_mode = DEEPBRAIN_MODE_MAGIC_VOICE;
 		yt_dcl_stop();
 		duer::duer_recorder_set_vad(true);
-
 		bExitMagicData = false;
 		duer::YTMediaManager::instance().stop();
 		duer::YTMediaManager::instance().stop_completely();
 		duer::YTMediaManager::instance().clear_queue();
-		
 		airkiss_lan_discovery_delete();
 		asr_service_delete();
 		mpush_service_delete();  
 		authorize_service_delete();
-		//wifi_manage_delete();
-		
+		//wifi_manage_delete();	
 		DEBUG_LOGE(LOG_TAG, "after enter magic");
-		memory_info();	
-		
+		memory_info();		
 		duer::YTMediaManager::instance().play_data(YT_DB_ENTER_MAGIC_VOICE,sizeof(YT_DB_ENTER_MAGIC_VOICE), duer::MEDIA_FLAG_RECORD_TONE);
+
 	}
 	else {
 
 		duer::duer_recorder_reinit();
-		rec_mode = DEEPBRAIN_MODE_ASR;
-		
+		rec_mode = DEEPBRAIN_MODE_ASR;		
 		duer::duer_recorder_set_vad_asr(false);
-		
-
 		if(!bExitMagicData)
 		{
 			bExitMagicData = true;
 			while(!bExitMagicDatav1){rtos::Thread::wait(10);}			
-		}
-		
+		}		
 		duer::YTMediaManager::instance().stop();
-		duer::YTMediaManager::instance().stop_completely();
-	#if 1	
+		duer::YTMediaManager::instance().stop_completely();	
 		while(duer::YTMediaManager::instance().is_playing())
 		{
 			DEBUG_LOGE(LOG_TAG, "is_playing");
 			rtos::Thread::wait(10);
 		}	
-	#endif
-	
 		if(magic_amrnb_data)
 		{	DEBUG_LOGE(LOG_TAG, "memory_free magic_amrnb_data");
 			memory_free(magic_amrnb_data);
 		}	
 		magic_amrnb_data = NULL;
-
 		DEBUG_LOGE(LOG_TAG, "before exit magic");
 		memory_info();
-
-		
-		
 		duer::duer_recorder_reinit();
-
 		airkiss_lan_discovery_create(TASK_PRIORITY_1);
 		asr_service_create(TASK_PRIORITY_1);
 		mpush_service_create(TASK_PRIORITY_1); 
 		authorize_service_create(TASK_PRIORITY_1);
-
-		//wifi_manage_create(TASK_PRIORITY_1);
-		yt_dcl_start();
-		
+		//wifi_manage_create(TASK_PRIORITY_1);	
+		yt_dcl_start();	
 		DEBUG_LOGE(LOG_TAG, "after exit magic");
-		memory_info();
-		
+		memory_info();		
 		duer::YTMediaManager::instance().play_data(YT_DB_EXIT_MAGIC_VOICE,sizeof(YT_DB_EXIT_MAGIC_VOICE), duer::MEDIA_FLAG_PROMPT_TONE);
+
+		
 	}
 }
 
@@ -856,16 +862,11 @@ void play_pig_voice()
 	voice = (voice == YT_DEEPBRAIN_PIG_1) ? YT_DEEPBRAIN_PIG_2 : YT_DEEPBRAIN_PIG_1;
 }
 
-void change_mode(DEEPBRAIN_MODE_t mode)
-{
-	dcl_mode = mode;
-}
-
 void change_volume()
 {
 	duer::YTMediaManager::instance().volume_up_repeat();
 	
-	if(is_wifi_connected() )	
+	if(is_wifi_connected()  && dcl_mode != DEEPBRAIN_MODE_PLAY_LOCAL)	
 	{
 		duer::YTMediaManager::instance().play_data(YT_KEY_TONE,sizeof(YT_KEY_TONE), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS); 	
 	}
@@ -878,7 +879,14 @@ void change_volume()
 void mchat_play()
 {
 	DEBUG_LOGI(LOG_TAG, "mchat_play");
-	duer::YTMediaManager::instance().play_wchat_queue();	
+	int ret = 0;
+	ret = duer::YTMediaManager::instance().play_wchat_queue();	
+#if KMT_PCBA
+	if(0==ret)
+	{
+		duer::event_trigger(duer::EVT_KEY_VOLUME_PRESS);
+	}
+#endif	
 }
 
 void reset_wifi()
@@ -917,10 +925,7 @@ void voice_down()
 	}	
 }
 
-void wifi_bt()
-{
-	duer::YTMediaManager::instance().switch_bt();
-}
+
 
 void play_pause()
 {
@@ -1001,6 +1006,10 @@ void wifi_button_longpress_handle()
 	duer::event_trigger(duer::EVT_RESET_WIFI);
 }
 
+void wifi_bt()
+{
+	duer::YTMediaManager::instance().switch_bt();
+}
 
 
 void play_prev()
@@ -1065,9 +1074,412 @@ void wifi_bt_fall_handle()
 	
 }
 
+#elif KMT_PCBA
+
+
+
+void entry_new_mode(int new_mode);
+
+void play_prev()
+{
+	duer::YTMediaManager::instance().play_prev();
+}
+
+
+void play_next()
+{
+	//duer::YTMediaManager::instance().play_next();
+
+	/// tf mode
+#if 0
+	char path[64];
+	PlayLocal::instance().getNextFilePath(path);
+	duer::YTMediaManager::instance().play_local(path,duer::MEDIA_FLAG_LOCAL | duer::MEDIA_FLAG_LOCAL_MODE);
+#else	/// spi flash mode
+	DEBUG_LOGI(LOG_TAG, "play_next");
+	unsigned int  addr = 0x00000000;	
+	int len = 0;	
+	spi_local_getnext(&addr,&len);	
+	duer::YTMediaManager::instance().play_data((const char *)&addr,len,duer::MEDIA_FLAG_LOCAL | duer::MEDIA_FLAG_LOCAL_MODE | duer::MEDIA_FLAG_SPI_DATA);
 #endif
+	
+}
 
 
+void set_action()
+{	
+	bool bEnable = duer::get_status();
+	bool bIsPlaying = duer::YTMediaManager::instance().is_playing();
+	
+	if(!bEnable)
+	{
+		duer::set_status(!bEnable);
+		DEBUG_LOGI(LOG_TAG, "set action enable");
+		if(bIsPlaying)duer::start_pwm_machine();	
+	}
+	else
+	{
+		DEBUG_LOGI(LOG_TAG, "set action disenable");
+		duer::stop_pwm_machine();
+		duer::set_status(!bEnable);
+	}
+}
+
+
+void switch_local_wifi_mode()
+{
+	dcl_mode = (dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL)	? DEEPBRAIN_MODE_ASR : DEEPBRAIN_MODE_PLAY_LOCAL;
+	
+	DEBUG_LOGI(LOG_TAG, "switch_local_wifi_mode");
+
+	
+	if(DEEPBRAIN_MODE_PLAY_LOCAL == dcl_mode)
+	{
+		DEBUG_LOGI(LOG_TAG, "entry play local mode");
+
+		/// tf mode
+		//PlayLocal::instance().init();
+		//// spi flash mode
+		spi_local_init();
+	}
+	else if(DEEPBRAIN_MODE_ASR== dcl_mode)
+	{
+		DEBUG_LOGI(LOG_TAG, "entry asr mode");
+	}
+	entry_new_mode(dcl_mode);
+}
+
+void switch_magic_bt_mode()
+{
+	if(!duer::YTMediaManager::instance().is_bt())
+	{	
+		DEBUG_LOGI(LOG_TAG, "entry bt mode");
+		dcl_mode = DEEPBRAIN_MODE_BT;
+		
+		if(duer::duer_recorder_is_busy())
+		{
+			duer::duer_recorder_stop();
+			wait_ms(500);
+			if(duer::duer_recorder_is_busy()) {			
+				return;
+			}
+		}		
+		duer::duer_recorder_reinit();
+		rec_mode = DEEPBRAIN_MODE_ASR;		
+		duer::duer_recorder_set_vad_asr(false);
+	#if 0	
+		if(!bExitMagicData)
+		{
+			bExitMagicData = true;
+			while(!bExitMagicDatav1){rtos::Thread::wait(10);}			
+		}
+	#endif	
+		duer::YTMediaManager::instance().stop();
+		duer::YTMediaManager::instance().stop_completely();	
+		while(duer::YTMediaManager::instance().is_playing())
+		{
+			DEBUG_LOGE(LOG_TAG, "is_playing");
+			rtos::Thread::wait(10);
+		}	
+		if(magic_amrnb_data)
+		{	DEBUG_LOGE(LOG_TAG, "memory_free magic_amrnb_data");
+			memory_free(magic_amrnb_data);
+		}	
+		magic_amrnb_data = NULL;
+		DEBUG_LOGE(LOG_TAG, "before exit magic");
+		memory_info();
+		duer::duer_recorder_reinit();
+		airkiss_lan_discovery_create(TASK_PRIORITY_1);
+		asr_service_create(TASK_PRIORITY_1);
+		mpush_service_create(TASK_PRIORITY_1); 
+		authorize_service_create(TASK_PRIORITY_1);
+		//wifi_manage_create(TASK_PRIORITY_1);	
+		yt_dcl_start();	
+		DEBUG_LOGE(LOG_TAG, "after exit magic");
+		memory_info();		
+
+		
+		//duer::MediaManager::instance().bt_mode();
+	}else{
+		DEBUG_LOGI(LOG_TAG, "entry magic mode");
+		duer::MediaManager::instance().uart_mode();
+		dcl_mode = DEEPBRAIN_MODE_MAGIC_VOICE;			
+		memory_info();
+		rec_mode = DEEPBRAIN_MODE_MAGIC_VOICE;
+		yt_dcl_stop();
+		duer::duer_recorder_set_vad(true);
+		bExitMagicData = false;
+		duer::YTMediaManager::instance().stop();
+		duer::YTMediaManager::instance().stop_completely();
+		duer::YTMediaManager::instance().clear_queue();
+		airkiss_lan_discovery_delete();
+		asr_service_delete();
+		mpush_service_delete();  
+		authorize_service_delete();
+		//wifi_manage_delete();	
+		memory_info();		
+		//duer::YTMediaManager::instance().play_data(YT_DB_ENTER_MAGIC_VOICE,sizeof(YT_DB_ENTER_MAGIC_VOICE), duer::MEDIA_FLAG_RECORD_TONE);
+	}
+	entry_new_mode(dcl_mode);
+}
+
+void switch_wifi_magic_mode()
+{	
+	if(duer::duer_recorder_is_busy())
+	{
+		duer::duer_recorder_stop();
+		wait_ms(500);
+		if(duer::duer_recorder_is_busy()) {			
+			return;
+		}
+	}
+	if(DEEPBRAIN_MODE_ASR == dcl_mode )
+	{
+		dcl_mode = DEEPBRAIN_MODE_MAGIC_VOICE;
+	}
+	else if(dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE)
+	{
+		dcl_mode = DEEPBRAIN_MODE_ASR;
+	}
+	if(dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE) {
+		DEBUG_LOGE(LOG_TAG, "enter magic mode");
+#if 1		
+		memory_info();
+		rec_mode = DEEPBRAIN_MODE_MAGIC_VOICE;
+		yt_dcl_stop();
+		duer::duer_recorder_set_vad(true);
+		bExitMagicData = false;
+		duer::YTMediaManager::instance().stop();
+		duer::YTMediaManager::instance().stop_completely();
+		duer::YTMediaManager::instance().clear_queue();
+		airkiss_lan_discovery_delete();
+		asr_service_delete();
+		mpush_service_delete();  
+		authorize_service_delete();
+		//wifi_manage_delete();	
+		memory_info();		
+		//duer::YTMediaManager::instance().play_data(YT_DB_ENTER_MAGIC_VOICE,sizeof(YT_DB_ENTER_MAGIC_VOICE), duer::MEDIA_FLAG_RECORD_TONE);
+#endif
+	}
+	else if(dcl_mode == DEEPBRAIN_MODE_ASR){
+		DEBUG_LOGE(LOG_TAG, "enter asr mode");
+#if 1
+		duer::duer_recorder_reinit();
+		rec_mode = DEEPBRAIN_MODE_ASR;		
+		duer::duer_recorder_set_vad_asr(false);
+		if(!bExitMagicData)
+		{
+			bExitMagicData = true;
+			while(!bExitMagicDatav1){rtos::Thread::wait(10);}			
+		}		
+		duer::YTMediaManager::instance().stop();
+		duer::YTMediaManager::instance().stop_completely();	
+		while(duer::YTMediaManager::instance().is_playing())
+		{
+			DEBUG_LOGE(LOG_TAG, "is_playing");
+			rtos::Thread::wait(10);
+		}	
+		if(magic_amrnb_data)
+		{	DEBUG_LOGE(LOG_TAG, "memory_free magic_amrnb_data");
+			memory_free(magic_amrnb_data);
+		}	
+		magic_amrnb_data = NULL;
+		DEBUG_LOGE(LOG_TAG, "before exit magic");
+		memory_info();
+		duer::duer_recorder_reinit();
+		airkiss_lan_discovery_create(TASK_PRIORITY_1);
+		asr_service_create(TASK_PRIORITY_1);
+		mpush_service_create(TASK_PRIORITY_1); 
+		authorize_service_create(TASK_PRIORITY_1);
+		//wifi_manage_create(TASK_PRIORITY_1);	
+		yt_dcl_start();	
+		DEBUG_LOGE(LOG_TAG, "after exit magic");
+		memory_info();		
+		//duer::YTMediaManager::instance().play_data(YT_DB_EXIT_MAGIC_VOICE,sizeof(YT_DB_EXIT_MAGIC_VOICE), duer::MEDIA_FLAG_PROMPT_TONE);	
+#endif
+	}
+
+	entry_new_mode(dcl_mode);
+}
+
+void btn2_fall_handle()
+{
+	if(dcl_mode == DEEPBRAIN_MODE_ASR)
+	{
+	
+	}
+}
+
+void btn2_rise_handle()
+{
+	if(dcl_mode == DEEPBRAIN_MODE_ASR)
+	{
+		// play wechat
+		duer::event_trigger(duer::EVT_KEY_MCHAT_PLAY);
+	}
+	else if(dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL)
+	{
+		// change volume
+		duer::event_trigger(duer::EVT_KEY_VOLUME_PRESS);	
+	}	
+
+}
+
+void btn2_long_handle()
+{
+	if(dcl_mode == DEEPBRAIN_MODE_ASR || dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE)
+	{
+		duer::event_trigger(duer::EVT_KEY_SWITCH_MAGIC_WIFI);
+	}
+}
+
+void btn3_fall_handle()
+{
+	if(dcl_mode == DEEPBRAIN_MODE_ASR || dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL)
+	{
+		
+	}
+}
+
+
+
+void btn3_rise_handle()
+{
+	if(dcl_mode == DEEPBRAIN_MODE_ASR || dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL)
+	{
+		duer::event_trigger(duer::EVT_KEY_SWITCH_WIFI_LOCAL);	
+	}
+}
+
+void btn3_long_handle()
+{
+	/// 当前wifi 模式下 长按 3号键
+	DEBUG_LOGE(LOG_TAG, "dcl_mode:[%d]",dcl_mode);
+	
+	if(dcl_mode == DEEPBRAIN_MODE_ASR || dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL)
+	{
+		/// 开启关闭行动	
+		duer::event_trigger(duer::EVT_KEY_ENABLE_ACTION);
+	}
+	else if(dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE )
+	{
+		duer::event_trigger(duer::EVT_KEY_SWITCH_BT_MAGIC);
+	}
+	else if(dcl_mode == DEEPBRAIN_MODE_BT)
+	{
+		duer::event_trigger(duer::EVT_KEY_SWITCH_BT_MAGIC);		
+	}
+}
+
+void btn4_fall_handle()
+{
+	if(dcl_mode == DEEPBRAIN_MODE_ASR)
+	{
+		duer::event_trigger(duer::EVT_KEY_REC_PRESS);
+	}
+	else if(dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL)
+	{
+		duer::event_trigger(duer::EVT_KEY_PLAY_NEXT);
+	}
+}
+
+void btn4_rise_handle()
+{
+#if 0
+	if(dcl_mode == DEEPBRAIN_MODE_ASR || DEEPBRAIN_MODE_WECHAT)
+	{
+		duer::event_trigger(duer::EVT_KEY_REC_RELEASE);
+	}
+#else
+	if(dcl_mode == DEEPBRAIN_MODE_ASR)
+	{
+		duer::event_trigger(duer::EVT_KEY_REC_PRESS);
+	}
+	else if( dcl_mode == DEEPBRAIN_MODE_WECHAT)
+	{
+		duer::event_trigger(duer::EVT_KEY_REC_RELEASE);
+	}
+#endif
+}
+
+void btn4_long_handle()
+{
+	if(dcl_mode == DEEPBRAIN_MODE_ASR)
+	{
+		duer::event_trigger(duer::EVT_KEY_MCHAT_PRESS);
+	}		
+} 
+
+
+
+
+void entry_new_mode(int new_mode)
+{
+	DEBUG_LOGI(LOG_TAG, "cur_mode:[%d],new_mode:[%d]",dcl_mode,new_mode);
+	
+	switch(new_mode)
+	{
+		case DEEPBRAIN_MODE_BT:
+		{
+			s_button2.fall(NULL);
+			s_button2.rise(NULL);
+			s_button2.longpress(NULL,0,-1);
+			s_button3.fall(NULL);
+			s_button3.rise(NULL);
+			s_button3.longpress(&btn3_long_handle , 1000, duer::YT_LONG_KEY_ONCE);
+			s_button4.fall(NULL);
+			s_button4.rise(NULL);
+			s_button4.longpress(NULL,0,-1);
+			duer::YTMediaManager::instance().play_data(YT_OPEN_BT,sizeof(YT_OPEN_BT), duer::MEDIA_FLAG_BT_MODE);
+		}
+		break;
+		case DEEPBRAIN_MODE_MAGIC_VOICE:
+		{
+			s_button2.fall(NULL);
+			s_button2.rise(NULL);
+			s_button2.longpress(&btn2_long_handle, 3000, duer::YT_LONG_KEY_ONCE);
+			s_button3.fall(NULL);
+			s_button3.rise(NULL);
+			s_button3.longpress(&btn3_long_handle , 1000, duer::YT_LONG_KEY_ONCE);
+			s_button4.fall(NULL);
+			s_button4.rise(NULL);
+			s_button4.longpress(NULL,0,-1);
+			duer::YTMediaManager::instance().play_data(YT_DB_ENTER_MAGIC_VOICE,sizeof(YT_DB_ENTER_MAGIC_VOICE), duer::MEDIA_FLAG_MAGIC_MODE | duer::MEDIA_FLAG_RECORD_TONE);
+		}
+		break;
+		case DEEPBRAIN_MODE_ASR:
+		{
+			s_button3.fall(&btn3_fall_handle);
+			s_button3.rise(&btn3_rise_handle);
+			s_button3.longpress(&btn3_long_handle , 1000, duer::YT_LONG_KEY_ONCE);
+			//s_button4.fall(&btn4_fall_handle);
+			s_button4.rise(&btn4_rise_handle);
+			s_button4.longpress(&btn4_long_handle, 1000, duer::YT_LONG_KEY_WITH_RISE);
+			s_button2.fall(&btn2_fall_handle);
+			s_button2.rise(&btn2_rise_handle);
+			s_button2.longpress(&btn2_long_handle, 3000, duer::YT_LONG_KEY_ONCE);
+			duer::YTMediaManager::instance().play_data(YT_ENTRY_NET_MODE,sizeof(YT_ENTRY_NET_MODE), duer::MEDIA_FLAG_WIFI_MODE);
+		}
+		break;
+		case DEEPBRAIN_MODE_PLAY_LOCAL:
+		{
+			s_button2.fall(&btn2_fall_handle);
+			s_button2.rise(&btn2_rise_handle);
+			s_button2.longpress(NULL,0,-1);
+			s_button3.fall(&btn3_fall_handle);
+			s_button3.rise(&btn3_rise_handle);
+			s_button3.longpress(&btn3_long_handle , 1000, duer::YT_LONG_KEY_ONCE);
+			s_button4.fall(&btn4_fall_handle);
+			s_button4.rise(&btn4_rise_handle);
+			s_button4.longpress(NULL,0,-1);
+			duer::YTMediaManager::instance().play_data(YT_ENTRY_LOCAL_MODE,sizeof(YT_ENTRY_LOCAL_MODE), duer::MEDIA_FLAG_LOCAL_MODE);
+		}
+		break;
+	}
+	dcl_mode = new_mode;
+}
+
+#endif
 
 void RegistWifi()
 {
@@ -1083,7 +1495,7 @@ void RegistRec()
 }
 
 
-
+/// 退出某个(wifi模式除外)模式的时候调用 
 void yt_dcl_start()
 {
 	record_sn = 0;
@@ -1098,8 +1510,6 @@ void yt_dcl_start()
 
 	DEBUG_LOGI(LOG_TAG, "yt_dcl_start");
 
-
-	
 #if ZXP_PCBA	
 	duer::event_set_handler(duer::EVT_KEY_REC_PRESS, &talk_start);
 	duer::event_set_handler(duer::EVT_KEY_REC_RELEASE, &talk_stop);
@@ -1114,10 +1524,19 @@ void yt_dcl_start()
 	duer::event_set_handler(duer::EVT_KEY_PAUSE, &play_pause);
 	duer::event_set_handler(duer::EVT_KEY_VOICE_UP, &voice_up);
 	duer::event_set_handler(duer::EVT_KEY_VOICE_DOWN, &voice_down);	
+#elif KMT_PCBA
+	duer::event_set_handler(duer::EVT_KEY_REC_PRESS, &talk_start);
+	duer::event_set_handler(duer::EVT_KEY_REC_RELEASE, &talk_stop);
+	duer::event_set_handler(duer::EVT_KEY_MCHAT_PRESS, &mchat_start);
+	duer::event_set_handler(duer::EVT_KEY_MCHAT_RELEASE, &mchat_stop);
+	duer::event_set_handler(duer::EVT_KEY_MCHAT_PLAY, &mchat_play);
 #endif	
 	duer::event_set_handler(duer::EVT_RESET_WIFI, &reset_wifi);
 }
 
+
+
+/// 进入某个(wifi模式除外)模式的时候调用 
 void yt_dcl_stop()
 {
 	duer_timer_stop(dcl_timeout_timer);
@@ -1137,6 +1556,12 @@ void yt_dcl_stop()
 	duer::event_set_handler(duer::EVT_KEY_PAUSE, NULL);
 	duer::event_set_handler(duer::EVT_KEY_VOICE_UP, NULL);
 	duer::event_set_handler(duer::EVT_KEY_VOICE_DOWN, NULL);
+#elif KMT_PCBA
+	duer::event_set_handler(duer::EVT_KEY_REC_PRESS, NULL);
+	duer::event_set_handler(duer::EVT_KEY_REC_RELEASE, NULL);
+	duer::event_set_handler(duer::EVT_KEY_MCHAT_PRESS, NULL);
+	duer::event_set_handler(duer::EVT_KEY_MCHAT_RELEASE, NULL);
+	duer::event_set_handler(duer::EVT_KEY_MCHAT_PLAY, NULL);
 #endif
 	duer::event_set_handler(duer::EVT_RESET_WIFI, NULL);
 }
@@ -1174,23 +1599,37 @@ void yt_dcl_init()
 	duer::event_set_handler(duer::EVT_KEY_PLAY_NEXT, &play_next);
 	duer::yt_key_init();
 	s_talk_button.fall(&talk_button_fall_handle);
-
-#if 0	
-    s_volume_up_button.rise(&volume_up_fall_handle);
-    s_volume_up_button.longpress(&volume_up_longpress_handle, 1000, duer::YT_LONG_KEY_PERIODIC);
-	//s_volume_up_button.fall(&volume_up_fall_handle);
-	//s_volume_down_button.fall(&volume_down_fall_handle);
-	s_volume_down_button.rise(&volume_down_fall_handle);
-    s_volume_down_button.longpress(&volume_down_longpress_handle, 1000, duer::YT_LONG_KEY_PERIODIC);
-#else
     s_volume_up_button.rise(&volume_up_longpress_handle);
     s_volume_up_button.longpress(&volume_up_fall_handle, 1000, duer::YT_LONG_KEY_ONCE);
 	s_volume_down_button.rise(&volume_down_longpress_handle);
     s_volume_down_button.longpress(&volume_down_fall_handle, 1000, duer::YT_LONG_KEY_ONCE);	
-#endif
 	s_wifi_bt_button.rise(&wifi_bt_fall_handle);
 	s_wifi_bt_button.longpress(&wifi_button_longpress_handle, 5000, duer::YT_LONG_KEY_ONCE);
 	s_play_pause_button.fall(&play_pause_fall_handle);
+#elif KMT_PCBA
+	duer::event_set_handler(duer::EVT_KEY_START_RECORD, &start_recorder);
+	duer::event_set_handler(duer::EVT_KEY_STOP_RECORD, &stop_recorder);
+    duer::event_set_handler(duer::EVT_RESET_WIFI, &reset_wifi);	
+	duer::event_set_handler(duer::EVT_KEY_VOICE_UP, &voice_up);
+	duer::event_set_handler(duer::EVT_KEY_VOICE_DOWN, &voice_down);
+	duer::event_set_handler(duer::EVT_KEY_SWITCH_WIFI_LOCAL, &switch_local_wifi_mode);
+	duer::event_set_handler(duer::EVT_KEY_SWITCH_BT_MAGIC, &switch_magic_bt_mode);
+	duer::event_set_handler(duer::EVT_KEY_SWITCH_MAGIC_WIFI, &switch_wifi_magic_mode);
+	duer::event_set_handler(duer::EVT_KEY_PLAY_PREV, &play_prev);
+	duer::event_set_handler(duer::EVT_KEY_PLAY_NEXT, &play_next);
+	duer::event_set_handler(duer::EVT_KEY_ENABLE_ACTION,&set_action);
+	duer::event_set_handler(duer::EVT_KEY_VOLUME_PRESS, &change_volume);
+	
+	duer::yt_key_init();
+	s_button3.fall(&btn3_fall_handle);
+	s_button3.rise(&btn3_rise_handle);
+	s_button3.longpress(&btn3_long_handle , 1000, duer::YT_LONG_KEY_ONCE);
+	//s_button4.fall(&btn4_fall_handle);
+	s_button4.rise(&btn4_rise_handle);
+	s_button4.longpress(&btn4_long_handle, 1000, duer::YT_LONG_KEY_WITH_RISE);
+	s_button2.fall(&btn2_fall_handle);
+	s_button2.rise(&btn2_rise_handle);
+	s_button2.longpress(&btn2_long_handle, 3000, duer::YT_LONG_KEY_ONCE);	
 #endif
 }
 
@@ -1234,6 +1673,10 @@ void auto_test_start()
 	s_wifi_bt_button.fall(&auto_test_key2);
 	s_talk_button.fall(&auto_test_key3);
 	s_play_pause_button.fall(&auto_test_key4);
+#elif KMT_PCBA
+	s_button3.fall(&auto_test_key3);
+	s_button4.fall(&auto_test_key4);
+	s_button2.fall(&auto_test_key2);
 #endif
 	yt_auto_test_start();
 }

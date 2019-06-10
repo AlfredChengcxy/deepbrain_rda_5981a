@@ -35,7 +35,18 @@ enum MediaFlag {
     MEDIA_FLAG_RECORD_TONE          = 0x0100, // this flag indicate the media is recorder tone
     MEDIA_FLAG_BT_TONE    			= 0x0200, // this flag indicate the media is interactive class
 	MEDIA_FLAG_URL_CHAT				= 0x0400, // URL_CHAT
-    
+
+/// add for spi
+	MEDIA_FLAG_SPI_DATA				= 0x0800,
+
+/////add by lijun
+	MEDIA_FLAG_BT_MODE = 0x100000,
+	MEDIA_FLAG_WIFI_MODE=0x200000,
+	MEDIA_FLAG_MAGIC_MODE=0x400000,
+	MEDIA_FLAG_LOCAL_MODE=0x800000,
+	
+
+	
     //MEDIA_FLAG_WECHAT               = 0x0400, // this flag indicate the media is wechat
     // this flag indicate the media is the CA connected prompt tone
     MEDIA_FLAG_CONTINUE_PLAY        = 0x8000, // this flag indicate the play is not from start

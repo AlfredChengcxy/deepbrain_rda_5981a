@@ -566,7 +566,7 @@ static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
 			g_wifi_manage_handle->wifi_handler->disconnect();
 			app_send_message(APP_NAME_WIFI_MANAGE, APP_MSG_TO_ALL, APP_EVENT_WIFI_DISCONNECTED, NULL, 0);	
 
-			///duer::YTMediaManager::instance().play_data(YT_DB_WIFI_CONNECTING_TONE_LONG, sizeof(YT_DB_WIFI_CONNECTING_TONE_LONG), duer::MEDIA_FLAG_PROMPT_TONE);	
+			duer::YTMediaManager::instance().play_data(YT_DB_WIFI_CONNECTING_TONE_LONG, sizeof(YT_DB_WIFI_CONNECTING_TONE_LONG), duer::MEDIA_FLAG_PROMPT_TONE);	
 #endif
 
 			memset(&g_wifi_manage_handle->curr_wifi, 0x00, sizeof(DEVICE_WIFI_INFO_T));
@@ -592,6 +592,7 @@ static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
 				DEBUG_LOGE(LOG_TAG, "start_wifi_airkiss_mode failed");
 
 				rtAirkiss.stop();
+				if(WIFI_MANAGE_STATUS_AIRKISS_ON == get_wifi_manage_status())
 				set_wifi_manage_status(WIFI_MANAGE_STATUS_IDLE);
 				break;
 				set_wifi_manage_status(WIFI_MANAGE_STATUS_IDLE);

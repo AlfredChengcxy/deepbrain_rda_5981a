@@ -30,6 +30,16 @@
 #define APP_NAME_WIFI_MANAGE				"wifi-manage"
 #define APP_NAME_WIFI_MANAGE_STACK_SIZE		(1024*2)
 
+
+
+
+/////////////// for ytawake
+#define APP_NAME_AWAKE_SERVICE				"awake-service"
+#define APP_NAME_AWAKE_SERVICE_STACK_SIZE	(1024*4)
+#define APP_NAME_AWAKE_RECORD				"awake-record"
+#define APP_NAME_AWAKE_RECORD_STACK_SIZE	(1024*4)
+
+
 #define APP_NAME_PLAY_LIST					"playlist-service"
 #define APP_NAME_PLAY_LIST_STACK_SIZE		(1024)
 

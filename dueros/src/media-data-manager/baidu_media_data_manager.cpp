@@ -18,7 +18,7 @@
 #include "lightduer_http_client.h"
 #include "lightduer_http_client_ops.h"
 #include "change_voice.h"
-
+#include "spilocal.h"
 
 bool bExitMagicData = false;
 bool bExitMagicDatav1 = false;
@@ -628,6 +628,11 @@ static int mdm_get_data_by_media_file_path(
     return data_pos == DUER_HTTP_DATA_LAST ? 0 : 1;
 }
 
+
+
+static char g_read_buff[FRAME_SIZE];
+
+
 static int mdm_send_data_to_buffer(const char* data, size_t size, int flags) {
     mdm_reset_stop_flag();
 
@@ -635,7 +640,12 @@ static int mdm_send_data_to_buffer(const char* data, size_t size, int flags) {
     int write_size = 0;
     duer_http_data_pos_t data_pos = DUER_HTTP_DATA_FIRST;
     DownloadContext ctx = { true, false, flags };
+
+
+	int i = 0;
+	
     while (size > 0) {
+
         if (pos == 0) {
             data_pos = DUER_HTTP_DATA_FIRST;
             write_size = FRAME_SIZE > size ? size : FRAME_SIZE;
@@ -646,6 +656,23 @@ static int mdm_send_data_to_buffer(const char* data, size_t size, int flags) {
             data_pos = DUER_HTTP_DATA_MID;
             write_size = FRAME_SIZE;
         }
+		
+#if 1	/// add for spi data
+		if(flags & MEDIA_FLAG_SPI_DATA)
+		{
+			////// spi 读取歌曲文件(前提已经做好了解析, data地址 和 size 大小解析)
+			/* 
+				in[data]: 实际的文件位置
+				in[write_size]: 实际要读取的大小  
+			*/
+			
+			pos = 0;
+			spi_local_get_frame(*((unsigned int *)data) + i* FRAME_SIZE,g_read_buff,FRAME_SIZE);
+			i++;
+			mdm_media_data_out_handler(&ctx, data_pos, g_read_buff + pos, write_size, NULL);
+		}
+		else
+#endif
 
         mdm_media_data_out_handler(&ctx, data_pos, data + pos, write_size, NULL);
 
@@ -663,7 +690,7 @@ static int mdm_send_data_to_buffer(const char* data, size_t size, int flags) {
     return 0;
 }
 
-static char g_read_buff[FRAME_SIZE];
+
 
 static int mdm_send_magic_data_to_buffer(char* data, size_t size, int flags)
 {

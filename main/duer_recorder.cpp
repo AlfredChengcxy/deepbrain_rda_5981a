@@ -1,7 +1,6 @@
 #include "duer_recorder.h"
 #include "device_vad.h"
 #include "baidu_media_play_type.h"
-
 #include "YTLight.h"
 #include "audio.h"
 #include "YTManage.h"
@@ -9,7 +8,6 @@
 #include "lightduer_memory.h"
 #include "deepbrain_app.h"
 #include "ringbuff.h"
-//#include "device_vad.h"
 #include "amr_codec_cns.h"
 #include "yt_vad_rda_interface.h"
 
@@ -34,15 +32,11 @@ enum _duer_record_state {
     DUER_REC_STARTED,
 };
 
-//static char	 flame_data[REC_FRAME_SIZE] = {0};
-static Ringbuff rb(REC_FRAME_SIZE, 4);
 
+static Ringbuff rb(REC_FRAME_SIZE, 4);
 static _duer_record_state _state = DUER_REC_STOPPED;
 
 //amr_decoder
-
-
-
 #ifndef DISABLE_LOCAL_VAD
 static void *pDecoderState = NULL;
 static void *pInstance = NULL;
@@ -50,7 +44,7 @@ static void *pInstance = NULL;
 
 
 #define USE_DYNAMIC_VAD 0
-#define USE_DYNAMIC_AMR 0
+#define USE_DYNAMIC_AMR 1
 
 #if !USE_DYNAMIC_AMR
 static char pBufferForDecoder[YT_NB_AMR_DECODER_SIZE_IN_BYTE];
@@ -65,19 +59,13 @@ static char *pBufferForVAD=NULL;
 #endif
 
 static short pOutFrame[160];
-//static char pStartFrame[REC_FRAME_SIZE];
-
 static bool vad_is_start = false;
 static bool vad_is_end = false;
-
 static bool vad_mode = false;
 static bool vad_asr_mode = false;
-
 int nSampleTotal = 0;
 #endif
 
-//static char REC_BUFF_1[REC_FRAME_SIZE * 20] = {0};
-//static char REC_BUFF_2[REC_FRAME_SIZE] = {0};
 
 const char amr_head[] =  "#!AMR\n";
 
@@ -368,9 +356,7 @@ static void duer_amr_thread_main()
 	unsigned int nOffset,nSampleNumber;
 	char *data = NULL;
 	unsigned int size = 0;
-
 	DUER_LOGI("duer_amr_thread_main start");
-	
 	duer_recorder_on_start();
 	
 #if !USE_DYNAMIC_THREAD
@@ -414,9 +400,6 @@ static void duer_rec_thread_main()
 	
 	_state = DUER_REC_STARTED;
 	rb.init();
-	//duer_recorder_on_start();
-	
-	//data = flame_data;
 	rb.get_writePtr(&data);
     p_cur = data;
 #if !USE_DYNAMIC_THREAD
@@ -444,6 +427,7 @@ static void duer_rec_thread_main()
     }
 exit:
 	YTMediaManager::instance().rec_stop();
+
 	_state = DUER_REC_STOPPED;
 }
 
@@ -461,15 +445,13 @@ void duer_recorder_stop()
 {
     if (_state > DUER_REC_STOPPED) {
         _state = DUER_REC_STOPPING;
-    }	
-	
+    }		
 	DUER_LOGI("duer_recorder_stop");
 }
 
 void duer_recorder_start()
 {		
 	DUER_LOGI("duer_recorder_start");
-
 	_state = DUER_REC_STARTING;	
 	
 	YTMediaManager::instance().rec_start();

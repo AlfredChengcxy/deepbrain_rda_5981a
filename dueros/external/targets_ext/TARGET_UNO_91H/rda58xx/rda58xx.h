@@ -123,7 +123,7 @@ public:
 	rda58xx_at_status btVolup(void);
 	rda58xx_at_status btVoldown(void);
 	rda58xx_at_status btGetA2dpStatus(app_a2dp_state_t *status);
-	
+		
     rda58xx_at_status bufferReq(mci_type_enum ftype, uint16_t size, uint16_t threshold);
     rda58xx_at_status stopPlay(void);
     rda58xx_at_status stopPlay(rda58xx_stop_type stype);

@@ -1,3 +1,4 @@
+
 // Copyright 2017 Baidu Inc. All Rights Reserved.
 // Author: Su Hao (suhao@baidu.com)
 //
@@ -19,8 +20,8 @@
 #define RESET_PIN   PC_6
 #endif
 
-//rda58xx _rda58xx(PB_2, PB_1, PC_9);
-rda58xx _rda58xx(PD_3, PD_2, PC_9);
+rda58xx _rda58xx(PB_2, PB_1, PC_9);
+//rda58xx _rda58xx(PD_3, PD_2, PC_9);///// ¿ª·¢°å
 
 namespace duer {
 
@@ -89,6 +90,19 @@ int BaiduCodecBase::on_close_power(int pin_name)
 	
     return 0;
 }
+
+
+int BaiduCodecBase::on_SetName(const unsigned char* name)
+{
+    rda58xx_at_status ret;	
+    ret = _rda58xx.SetName(name);
+    _rda58xx.atHandler(ret);
+    while (!_rda58xx.isReady()) {
+        Thread::wait(100);
+    }
+	return 0;
+}
+
 
 int BaiduCodecBase::on_bt_getA2dpstatus(int *status)
 {
@@ -174,6 +188,11 @@ int BaiduCodecBase::on_start_play(MediaType type, int bitrate) {
     while (!_rda58xx.isReady()) {
         Thread::wait(100);
     }
+
+////////add for hailingke
+	_rda58xx.setGPIOMode(4);		
+	_rda58xx.setGPIODir(4);
+
 
     static bool is_first_time = true;
     if (is_first_time) {

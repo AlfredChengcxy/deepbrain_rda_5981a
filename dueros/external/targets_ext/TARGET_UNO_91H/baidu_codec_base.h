@@ -25,6 +25,7 @@ protected:
 	virtual int on_bt_volup();
 	virtual int on_bt_voldown();
 	virtual int on_bt_getA2dpstatus(int *status);
+	virtual int on_SetName(const unsigned char* name);
 
     virtual int on_start_play(MediaType type, int bitrate);
 

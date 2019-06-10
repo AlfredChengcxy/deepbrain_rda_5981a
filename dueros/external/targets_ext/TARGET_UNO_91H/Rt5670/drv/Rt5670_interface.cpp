@@ -45,8 +45,7 @@ int I2sInit(void)
     i2s_cfg.tx.msb_lsb        = I2S_MSB;
     i2s_cfg.tx.wrfifo_cntleft = I2S_WF_CNTLFT_8W;
 
-    //rda_i2s_init(&i2s_obj, I2S_TX_BCLK, I2S_TX_WS, I2S_TX_SD, NC, NC, I2S_RX_SD, GPIO_PIN5);
-	rda_i2s_init(&i2s_obj, I2S_TX_BCLK, I2S_TX_WS, I2S_TX_SD, NC, NC, I2S_RX_SD, NC);
+    rda_i2s_init(&i2s_obj, I2S_TX_BCLK, I2S_TX_WS, I2S_TX_SD, NC, NC, I2S_RX_SD, GPIO_PIN5);
     rda_i2s_set_ws(&i2s_obj, 16000, 768);
     rda_i2s_set_tx_channel(&i2s_obj, 1);
     rda_i2s_set_rx_channel(&i2s_obj, 1);
@@ -118,7 +117,9 @@ int I2s_Wait_RxDone()
 #define SDA_PIN  GPIO_PIN22                         
 #define SCL_PIN  GPIO_PIN23                         
 
+//I2C i2c(SDA_PIN, GPIO_PIN23);
 I2C *i2c;
+
 
 typedef unsigned char uint8;
 typedef unsigned short uint16;
@@ -367,6 +368,7 @@ err:
  *     - (-1) Parameter error
  *     - (0)   Success
  */
+ 
 int rt5670SetAdcDacVolume(int mode, int volume)
 {
     int res = 0;
@@ -2980,34 +2982,14 @@ union
 } DSP_REG_2305H;//ft_flag 0x0000 for HF mode
 
 u16 testdata2=0;
-
 int rt5670Init2()
 {
 	int i;
 	int res = 0;
-	
-	i2c = new mbed::I2C(SDA_PIN, GPIO_PIN23);
+
+	i2c = new I2C(SDA_PIN, GPIO_PIN23);
 	I2sInit();
 
-	for(i=0; i <50000; ++i);
-	for(i=0; i <50000; ++i);
-	for(i=0; i <50000; ++i);
-	for(i=0; i <50000; ++i);
-	for(i=0; i <50000; ++i);
-	for(i=0; i <50000; ++i);
-
-	
-}
-
-
-int rt5670Init3()
-{
-	int i;
-	int res = 0;
-	
-	i2c = new mbed::I2C(SDA_PIN, GPIO_PIN23);
-	I2sInit();
-	
 	for(i=0; i <50000; ++i);
 	for(i=0; i <50000; ++i);
 	for(i=0; i <50000; ++i);
@@ -3036,7 +3018,7 @@ int rt5670Init3()
 	MX_REG_0AH.databit.Reserved2=1;//1h,Reserved	
 	MX_REG_0AH.databit.En_bst1=0;//Combo Jack Function Control ,IN1 Port Enable Control,0b: Disable,1b: Enable
 	MX_REG_0AH.databit.Reserved=4;//0 Reserved,here =4?????	
-	MX_REG_0AH.databit.Sel_bst1=1+1-0+0+1;//30db,//IN1 Boost Control (BST1),2--26DB????
+	MX_REG_0AH.databit.Sel_bst1=3-1;//30db,//IN1 Boost Control (BST1),2--26DB????
 	rt5670WriteReg(0x0A, MX_REG_0AH.data16);
 
 	//MX0B Combo Jack Control 2
@@ -3064,7 +3046,7 @@ int rt5670Init3()
 	//MX0E IN3 Control
 	//res |= rt5670WriteReg(0x0e, 0x3000);	
 	MX_REG_0EH.databit.Reserved=0;//0h Reserved
-	MX_REG_0EH.databit.Sel_bst3=2-0+0+1;//???,?????????
+	MX_REG_0EH.databit.Sel_bst3=3-1;//???,?????????
 	;//IN3 Boost Control (BST3) 30db,2--24DB
 	rt5670WriteReg(0x0E, MX_REG_0EH.data16);	
 
@@ -3133,9 +3115,9 @@ int rt5670Init3()
 	MX_REG_1CH.databit.Mu_adc_vol_l=0;//=0 
 	rt5670WriteReg(0x1C, MX_REG_1CH.data16);	
 	// MX1D Mono ADC Digital Volume Control
-	MX_REG_1DH.databit.Mono_ad_gain_r=0x2F;//=0DB with 0.375dB/Step
+	MX_REG_1DH.databit.Mono_ad_gain_r=0x2F+10;//=0DB with 0.375dB/Step
 	MX_REG_1DH.databit.reserved=0;//=0 
-	MX_REG_1DH.databit.Mono_ad_gain_l=0X2F;//=0DB with 0.375dB/Step
+	MX_REG_1DH.databit.Mono_ad_gain_l=0X2F+10;//=0DB with 0.375dB/Step
 	MX_REG_1DH.databit.reserved2=0;//=0 
 	rt5670WriteReg(0x1D, MX_REG_1DH.data16);
 
@@ -3277,9 +3259,10 @@ int rt5670Init3()
 	MX_REG_2CH.databit.Mu_stereomixl_to_dacmixl=1;//	
 	rt5670WriteReg(0x2C, MX_REG_2CH.data16);
 
-	MX_REG_2EH.databit.Vol_txdp_r=0x2f - 20+10;//
+	//////////////////////////////////////////////////////////////// ?? ??
+	MX_REG_2EH.databit.Vol_txdp_r=0x2f+20;//
 	MX_REG_2EH.databit.Reserved=0;//
-	MX_REG_2EH.databit.Vol_txdp_l=0x2f - 20+10;//
+	MX_REG_2EH.databit.Vol_txdp_l=0x2f+20;//
 	MX_REG_2EH.databit.Reserved2=0;//
 	rt5670WriteReg(0x2E, MX_REG_2EH.data16);
 	////////////////////////////////////////////////////////////////////////////////////////////
@@ -3692,10 +3675,12 @@ void FM36Iint(void)
 	//profile setting 0x8005 is 1-mic hands-free. Hands-free modes provide AEC to cancel
 	//acoustics echo and NS to suppress stationary ambient noise; in addition, 2-mic hands-free
 	//support beam-forming feature to further suppress non-stationary noise.
+
+	/// ??
 	//res |= rt5670_dsp_write(0x22f8, 0x8003);//Internal profile 0x8003 //2-mic mode for hands-free, 16KHz sample rate
 	res |= rt5670_dsp_write(0x22f8, 0x8005);//Internal profile 0x8005 //1-mic mode for hands-free, 16KHz sample rate
-    //res |= rt5670_dsp_write(0x230c, 0x200);//Internal profile 0x8005 //1-mic mode for hands-free, 16KHz sample rate
-    //res |= rt5670_dsp_write(0x230d, 0x100);//Internal profile 0x8005 //1-mic mode for hands-free, 16KHz sample rate
+    //res |= rt5670_dsp_write(0x230c, 0x100);//Internal profile 0x8005 //1-mic mode for hands-free, 16KHz sample rate
+    //res |= rt5670_dsp_write(0x230d, 0x80);//Internal profile 0x8005 //1-mic mode for hands-free, 16KHz sample rate
     
 	res |= rt5670_dsp_write(0x22dd, 0);//
 	res |= rt5670_dsp_write(0x22de, 0);//
@@ -3757,7 +3742,7 @@ void FM36Iint(void)
 	DSP_REG_2304H.databit.Line_in_HPF_Enable=0;
 	DSP_REG_2304H.databit.reserved=0;
 	DSP_REG_2304H.databit.FENS_FFTONLY=0;
-	DSP_REG_2304H.databit.FFP=1;
+	DSP_REG_2304H.databit.FFP=0;
 	rt5670_dsp_write(0x2304, DSP_REG_2304H.data16);//sp_flag 0x0323
 	
   //res |= rt5670_dsp_write(0x2304, 0x0332);
@@ -3778,6 +3763,8 @@ void FM36Iint(void)
 	/////////////////////////////////////////////////////////////////////////////////////////////////////		
 }
 
+
+
 void DspTuneParaSetNS(void)
 
 {
@@ -3790,6 +3777,8 @@ void DspTuneParaSetNS(void)
 	res |= rt5670_dsp_write(0x2370,0x0005);  //1_8	8-->2S		
 	
 	//two mic parameters setting //  /////////////////////new 20171122
+
+	/// ????
 	res |= rt5670_dsp_write(0x2371, 0x0004);//?MIC??UNIT:cm
   
 	///*
@@ -3816,9 +3805,9 @@ void DspTuneParaSetNS(void)
 	res |= rt5670_dsp_write(0x237f, 0x7FFF);
 
 	//Set snesu_thr_sn_est to smaller value will keep more NE voice under stationary noise, but it might results in watering sounded noise.
-	res |= rt5670_dsp_write(0x2386, 0x300);  //1_0x0300   2_1000
+	res |= rt5670_dsp_write(0x2386, 0x1000);  //1_0x0300   2_1000
 	//higher value means more staionary noise in high frequency will be suppression */
-	res |= rt5670_dsp_write(0x2387, 0x300);	//1_0x0300	 2_1000	
+	res |= rt5670_dsp_write(0x2387, 0x1000);	//1_0x0300	 2_1000	
 	
 	//Compensation factor on stationary noise power estimation. Range in 0 ~
 	//0x7FFF, Q15 format. Smaller value leads to less stationary noise
@@ -3838,8 +3827,8 @@ void DspTuneParaSetNS(void)
 	//Maximum NS Level,The signal processing algorithm will adjust the targeting NS level within this range depending on the signal and noise conditions.
 	//less value means more noise suppression 
 	//18db
-	res |= rt5670_dsp_write(0x238b, 0x3000);//min_g_ctrl_maxg,Upper bound of noise suppression level in frequency domain, 0x7fff is 0dB.238b_238c_23a1
-	res |= rt5670_dsp_write(0x238c, 0x3000);//min_g_ctrl_ming,Lower bound of noise suppression level,Set min_g_ctrl_ming <= min_g_ctrl_maxg
+	res |= rt5670_dsp_write(0x238b, 0x2000);//min_g_ctrl_maxg,Upper bound of noise suppression level in frequency domain, 0x7fff is 0dB.238b_238c_23a1
+	res |= rt5670_dsp_write(0x238c, 0x1000);//min_g_ctrl_ming,Lower bound of noise suppression level,Set min_g_ctrl_ming <= min_g_ctrl_maxg
 
 
 	//Maximum NS Level,The signal processing algorithm will adjust the targeting NS level within this range depending on the signal and noise conditions.
@@ -3867,7 +3856,7 @@ void DspTuneParaSetNS(void)
 	//8: -6dB, 9: -8dB, A: -10dB, B: -13dB,
 	//C: -16dB, D: -20dB, E: -30dB, F: -50dB.		
 	//res |= rt5670_dsp_write(0x2398, 0x4444);
-	//res |= rt5670_dsp_write(0x2398, 0x4668);
+	res |= rt5670_dsp_write(0x2398, 0x4668);
 	//res |= rt5670_dsp_write(0x2397, 0x4456);//Bit[15~12]: 4583.7 ~ 4958.73, Bit[11~8]: 4958.73 ~ 5333.76Hz,Bit[7~4]: 5333.76 ~ 5708.79Hz, Bit[3~0]: 5708.79 ~ 6083.82 Hz;
 	//res |= rt5670_dsp_write(0x2398, 0x99bb);//Bit[15~12]: 6083.82 ~ 6458.85Hz, Bit[11~8]: 6458.85 ~ 6833.88Hz,Bit[7~4]: 6833.88 ~ 7208.91Hz, Bit[3~0]: 7208.91 ~ 7583.94 Hz;	
 
@@ -4067,11 +4056,13 @@ void DspTuneParaSetAEC(void)
 	res |= rt5670_dsp_write(0x23bb, 0x6000);//Threshold 3 of double talk detection	
 		
 	/* main parameter to sup echo; higer value maens more sup(0-7fff) */
-	 //res |= rt5670_dsp_write(0x238a, 0x0400);//A bigger value results in more suppression on echo, but may attenuate the near-end speech as well
+	//res |= rt5670_dsp_write(0x238a, 0x0400);//A bigger value results in more suppression on echo, but may attenuate the near-end speech as well
 	//res |= rt5670_dsp_write(0x238a, 0x7f00);
 	
 	
 }
+
+
 
 
 

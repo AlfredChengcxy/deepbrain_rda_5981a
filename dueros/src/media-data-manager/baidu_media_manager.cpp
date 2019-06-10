@@ -263,6 +263,10 @@ void MediaManager::voice_up()
 	
 }
 
+
+
+
+
 void MediaManager::voice_down()
 {
 	unsigned char s_volume = get_volume();
@@ -279,6 +283,13 @@ MediaPlayerStatus MediaManager::bt_mode() {
     media_play_set_bt_mode();
 	return status;
 }
+
+
+void MediaManager::set_bt_name(const unsigned char * name)
+{
+	media_set_bt_name(name);
+}
+
 
 MediaPlayerStatus MediaManager::uart_mode() {
     MediaPlayerStatus status = get_media_player_status();	

@@ -11,7 +11,8 @@
 #define DCL_DEMO_ENV					0	//DEMO环境
 #define DCL_PRE_ENV						0	//预发布环境
 #define DCL_YT_ENV						0	//youngtone
-#define DCL_SF_ENV						1	//sf
+#define DCL_SF_ENV						0	//sf
+#define DCL_KMT_ENV						1	//sf
 
 #define PROJECT_NAME  "PJ-20180830-0001-AIXIAOBEI-AsHjXYD4CwNZDU3G"
 
@@ -53,6 +54,13 @@
 #define DEEP_BRAIN_APP_ID 	"A000000000000436"
 #define DEEP_BRAIN_ROBOT_ID "cb8c2775-1ad4-11e9-8148-801844e30cac"
 #endif
+
+
+#if DCL_KMT_ENV == 1
+#define DEEP_BRAIN_APP_ID 	"A000000000000468"
+#define DEEP_BRAIN_ROBOT_ID "a91e9615-786c-11e9-8148-801844e30cac"
+#endif
+
 
 //OTA升级服务器地址
 //#define OTA_UPDATE_SERVER_URL		"http://file.yuyiyun.com:2088/ota/PJ-20180830-0002-aixiaobei/version.txt"
