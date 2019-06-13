@@ -46,11 +46,13 @@ typedef enum NLP_RESULT_TYPE_T
 /*语义结果-聊天结果*/
 typedef struct NLP_RESULT_CHAT_T
 {
-	//char text[1024];
-	//char link[1024];
+#if 1 //// ��ʱ�޸�
+	char text[1024];
+	char link[1024];
+#else
 	char text[512];
 	char link[512];
-	
+#endif	
 }NLP_RESULT_CHAT_T;
 
 /*语义结果-音乐资源*/

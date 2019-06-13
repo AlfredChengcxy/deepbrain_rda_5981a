@@ -723,8 +723,8 @@ void talk_start()
 	duer::duer_recorder_set_vad(true);
 	duer::duer_recorder_set_vad_asr(true);
 
-	duer::YTMediaManager::instance().play_data(YT_MCHAT_START,sizeof(YT_MCHAT_START), duer::MEDIA_FLAG_RECORD_TONE);
-	
+	//duer::YTMediaManager::instance().play_data(YT_MCHAT_START,sizeof(YT_MCHAT_START), duer::MEDIA_FLAG_RECORD_TONE);
+	duer::YTMediaManager::instance().play_data(YT_TIP,sizeof(YT_TIP), duer::MEDIA_FLAG_RECORD_TONE);
 }
 
 void talk_stop()
@@ -1626,7 +1626,7 @@ void yt_dcl_init()
 	s_button3.longpress(&btn3_long_handle , 1000, duer::YT_LONG_KEY_ONCE);
 	//s_button4.fall(&btn4_fall_handle);
 	s_button4.rise(&btn4_rise_handle);
-	s_button4.longpress(&btn4_long_handle, 1000, duer::YT_LONG_KEY_WITH_RISE);
+	s_button4.longpress(&btn4_long_handle, 2000, duer::YT_LONG_KEY_WITH_RISE);
 	s_button2.fall(&btn2_fall_handle);
 	s_button2.rise(&btn2_rise_handle);
 	s_button2.longpress(&btn2_long_handle, 3000, duer::YT_LONG_KEY_ONCE);	

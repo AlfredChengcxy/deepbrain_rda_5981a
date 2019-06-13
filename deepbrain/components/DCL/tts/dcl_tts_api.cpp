@@ -302,8 +302,8 @@ DCL_ERROR_CODE_t dcl_get_tts_url(
 	memset(http_buffer->str_response, 0, sizeof(http_buffer->str_response));
 	ret = sock_readn_with_timeout(http_buffer->sock, http_buffer->str_response, sizeof(http_buffer->str_response) - 1, 2000);
 	
-	DEBUG_LOGE(TAG_LOG, "str_response:[%x][%d][%s]\r\n",http_buffer->str_response,sizeof(http_buffer->str_response),http_buffer->str_response);
-	
+	//DEBUG_LOGE(TAG_LOG, "str_response:[%x][%d][%s]\r\n",http_buffer->str_response,sizeof(http_buffer->str_response),http_buffer->str_response);
+	printf( "str_response:[%x][%d][%s]\r\n",http_buffer->str_response,sizeof(http_buffer->str_response),http_buffer->str_response);
 	if (ret <= 0)
 	{
 		DEBUG_LOGE(TAG_LOG, "sock_readn_with_timeout failed");

@@ -143,7 +143,7 @@ int main()
     duer::MediaManager::instance().initialize();
 	duer::YTMediaManager::instance().init();
 
-    duer::YTMediaManager::instance().set_volume(10/*duer::DEFAULT_VOLUME*/);	
+    duer::YTMediaManager::instance().set_volume(duer::DEFAULT_VOLUME);	
 
 #if 0//chenjl add 20190317
 	if(vbat_check_startup())
@@ -159,7 +159,7 @@ int main()
 	}
 #endif
 
-#if 0
+#if 1
 	duer::YTMediaManager::instance().play_data(YT_DB_WELCOME, sizeof(YT_DB_WELCOME), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);	
 #else
 	duer::YTMediaManager::instance().play_data(YT_DB_WELCOME_PHC, sizeof(YT_DB_WELCOME_PHC), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);		
