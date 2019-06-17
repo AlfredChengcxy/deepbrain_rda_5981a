@@ -633,6 +633,7 @@ static int mdm_get_data_by_media_file_path(
 static char g_read_buff[FRAME_SIZE];
 
 
+
 static int mdm_send_data_to_buffer(const char* data, size_t size, int flags) {
     mdm_reset_stop_flag();
 
@@ -643,6 +644,7 @@ static int mdm_send_data_to_buffer(const char* data, size_t size, int flags) {
 
 
 	int i = 0;
+	int addr = *(unsigned int *) data;
 	
     while (size > 0) {
 
@@ -665,9 +667,11 @@ static int mdm_send_data_to_buffer(const char* data, size_t size, int flags) {
 				in[data]: 实际的文件位置
 				in[write_size]: 实际要读取的大小  
 			*/
-			
 			pos = 0;
-			spi_local_get_frame(*((unsigned int *)data) + i* FRAME_SIZE,g_read_buff,FRAME_SIZE);
+			//DUER_LOGE("data : %x,*data : %x,addr : %x ,*(unsigned int *)data : %x",data,*data,addr,*(unsigned int *)data);
+			// a big bug when a inttrup happen the *data will be changed( const char * 会被修改..你说奇怪不奇怪)
+			//spi_local_get_frame(*((unsigned int *)data) + i* FRAME_SIZE,g_read_buff,FRAME_SIZE);
+			spi_local_get_frame(addr + i* FRAME_SIZE,g_read_buff,FRAME_SIZE);
 			i++;
 			mdm_media_data_out_handler(&ctx, data_pos, g_read_buff + pos, write_size, NULL);
 		}

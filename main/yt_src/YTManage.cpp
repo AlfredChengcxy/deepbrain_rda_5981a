@@ -237,6 +237,7 @@ bool get_status()
 void stop_pwm_machine()
 {
 #if USE_PWM_MACHINE_FOR_KMT
+	//return ;
 	if(!bEnable)return;
 	s_motor_pin1 = 1;
 	s_motor_pin2 = 1;
@@ -249,6 +250,7 @@ void stop_pwm_machine()
 void start_pwm_machine()
 {
 #if USE_PWM_MACHINE_FOR_KMT
+	//return ;
 	if(!bEnable)return;
 	s_motor_pin1 = 1;
 	s_motor_pin2 = 1;

@@ -234,6 +234,12 @@ void spi_local_getpre(uint32_t *paddr,int *nlen)
 void spi_local_get_frame(uint32_t  addr,char *pdata,int nlen)
 {
 	if(!gInit)return;
+	
+#if 1//DEBUG_DATA	
+	printf("addr:[%x]\r\n",addr);	
+#endif
+	//addr = 0x2700;
+
 	read_file_data(addr,pdata,nlen);
 }
 

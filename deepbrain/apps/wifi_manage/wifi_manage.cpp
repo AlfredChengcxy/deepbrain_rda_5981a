@@ -420,6 +420,7 @@ namespace deepbrain{
 extern void yt_dcl_start();
 extern void RegistWifi();
 extern void RegistRec();
+void net_connected(bool b_connect);
 }
 void AirkissTimeOut(void const *argument)
 {
@@ -431,6 +432,10 @@ void AirkissTimeOut(void const *argument)
 		duer::YTMediaManager::instance().play_data(YT_DB_WIFI_AIRKISS_NOT_COMALETE, sizeof(YT_DB_WIFI_AIRKISS_NOT_COMALETE), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);
 		set_wifi_manage_status(WIFI_MANAGE_STATUS_IDLE);
 		deepbrain::yt_dcl_start();
+		
+		task_thread_sleep(5000);
+		deepbrain::net_connected(false);
+
 		return ;	
 	}
 }
@@ -513,7 +518,9 @@ static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
 			handle->connect_index = -1;
 			DEBUG_LOGI(LOG_TAG, "WIFI_MANAGE_STATUS_STA_CONNECT_SUCCESS");
 			bIsConnectedOnce = true;
-			rtAirkiss.stop();		
+			rtAirkiss.stop();
+
+			deepbrain::net_connected(true);
             break;
         }
 		case WIFI_MANAGE_STATUS_STA_CONNECT_FAIL:
@@ -639,6 +646,8 @@ static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
 
 			duer::YTMediaManager::instance().play_data(YT_DB_WIFI_SUCCESS, sizeof(YT_DB_WIFI_SUCCESS), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);	
 			//audio_play_tone_mem(FLASH_MUSIC_NETWORK_CONNECT_SUCCESS, AUDIO_TERM_TYPE_DONE);
+
+			deepbrain::net_connected(true);
             break;
         }
 		case WIFI_MANAGE_STATUS_AIRKISS_CONNECT_FAIL:
