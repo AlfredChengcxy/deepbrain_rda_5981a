@@ -1,6 +1,7 @@
 #include "SpiLocal.h"
 #include "SpiFlash.h"
 #include "audio.h"
+#include <math.h>
 
 #define AUDIO_NUMS 20
 #define FLASH_START_ADDR  0x000000//24BIT
@@ -202,6 +203,22 @@ void spi_local_init()
 	gInit = true;
 	gCurentIndex = 0;
 }
+
+
+void spi_local_getrandom(uint32_t *paddr,int *nlen)
+{
+	if(!gInit)return;
+	srand(us_ticker_read());
+	gCurentIndex = rand() % ahs.total;
+	*paddr = ahs.ah[gCurentIndex].addr;
+	*nlen = ahs.ah[gCurentIndex].len;
+#if 1//DEBUG_DATA
+	printf("addr:[%x]\r\n",*paddr);
+	printf("index:[%d],gCurentIndex:[%d]\r\n",ahs.ah[gCurentIndex].index,gCurentIndex);
+	printf("len:[%d]\r\n",*nlen);
+#endif	
+}
+
 
 void spi_local_getnext(uint32_t *paddr,int *nlen)
 {

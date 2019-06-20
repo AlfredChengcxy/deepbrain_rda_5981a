@@ -185,30 +185,37 @@ void rtMotorRun(void const *argument)
 {
 	unsigned int _delay = 0;
 
+	int flag = (int)(*(int *)argument);
+	
+
 	switch(nStep)	
 	{
-		case 0:
+		case 0:// Å¤Ñü
 			s_motor_pin1 = 1;
 			s_motor_pin2 = 0;
 			_delay = 1000;
 			nStep = 1;
 			break;
 
-		case 1:
+		case 1:// Í£Ö¹
 			s_motor_pin1 = 1;
 			s_motor_pin2 = 1;
 			_delay = 400;
-			nStep = 2;
+
+			if(flag == MEDIA_FLAG_DOG_DATA)
+				nStep = 1;
+			else
+				nStep = 2;
 			break;
 
-		case 2:
+		case 2:// Ç°½ø
 			s_motor_pin1 = 0;
 			s_motor_pin2 = 1;
 			_delay = 2000;
 			nStep = 3;
 			break;
 
-		case 3:
+		case 3:// Í£Ö¹
 			s_motor_pin1 = 1;
 			s_motor_pin2 = 1;
 			_delay = 400;
@@ -233,6 +240,7 @@ bool get_status()
 {
 	return bEnable;
 }
+
 
 void stop_pwm_machine()
 {
@@ -271,7 +279,7 @@ int YTMDMPlayerListener::on_start(int flags)
 #if USE_PWM_MACHINE_FOR_ZXP
 	gflags = flags;
 #endif	
-	if (flags & MEDIA_FLAG_DCS_URL || flags &MEDIA_FLAG_SPI_DATA ) 
+	if (flags & MEDIA_FLAG_DCS_URL || flags &MEDIA_FLAG_SPI_DATA || flags & MEDIA_FLAG_DOG_DATA) 
 	{	
 	#if USE_PWM_MACHINE_FOR_ZXP
 		gPwm = 0.00f;//0.3	  
@@ -288,10 +296,13 @@ int YTMDMPlayerListener::on_start(int flags)
 			s_motor_pin1 = 1;
 			s_motor_pin2 = 1;
 			nStep = 0;
-			rtMotorRun(NULL);
+			//rtMotorRun(NULL);
+			rtMotorRun(&flags);
 		}
 	#endif	
 	}
+
+	
 	else if(flags & MEDIA_FLAG_MAGIC_VOICE) {
 	#if USE_PWM_MACHINE_FOR_ZXP	
 		gPwm = 0.00f;//0.3	  
@@ -308,7 +319,8 @@ int YTMDMPlayerListener::on_start(int flags)
 			s_motor_pin1 = 1;
 			s_motor_pin2 = 1;			
 			nStep = 0;
-			rtMotorRun(NULL);
+			//rtMotorRun(NULL);
+			rtMotorRun(&flags);
 		}
 	#endif	
 	}
@@ -402,7 +414,12 @@ int YTMDMPlayerListener::on_finish(int flags)
 		PlayLocal::instance().getNextFilePath(path);
 		YTMediaManager::instance().play_local(path,MEDIA_FLAG_LOCAL | duer::MEDIA_FLAG_LOCAL_MODE);
 	#else
-		duer::event_trigger(duer::EVT_KEY_PLAY_NEXT);
+		if(flags & MEDIA_FLAG_SPI_DATA_NO_CON)
+		{
+		
+		}
+		else
+			duer::event_trigger(duer::EVT_KEY_PLAY_NEXT);
 	#endif
 	}
 	else

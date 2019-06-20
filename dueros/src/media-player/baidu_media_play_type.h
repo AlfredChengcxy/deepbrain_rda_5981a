@@ -38,7 +38,10 @@ enum MediaFlag {
 
 /// add for spi
 	MEDIA_FLAG_SPI_DATA				= 0x0800,
-
+	
+	MEDIA_FLAG_SPI_DATA_NO_CON		= 0x20000,
+	MEDIA_FLAG_DOG_DATA				= 0x10000,
+	
 /////add by lijun
 	MEDIA_FLAG_BT_MODE = 0x100000,
 	MEDIA_FLAG_WIFI_MODE=0x200000,

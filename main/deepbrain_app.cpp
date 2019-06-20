@@ -211,6 +211,32 @@ void yt_dcl_process_result(ASR_RESULT_t *asr_result)
 		case NLP_RESULT_TYPE_CHAT:
 		{
 			bool stop_flag = yt_dcl_process_stop_chat(nlp_result);
+
+
+		#if KMT_PCBA
+			char p_maigemeng[9]={0xE5,0x8D,0x96,0xE4,0xB8,0xAA,0xE8,0x90,0x8C};
+			char p_tiaogewu[9]= {0xE8,0xB7,0xB3,0xE4,0xB8,0xAA,0xE8,0x88,0x9E};
+			char p_changshouge[9]={0xE5,0x94,0xB1,0xE9,0xA6,0x96,0xE6,0xAD,0x8C};
+			if (memcmp(nlp_result->input_text, p_maigemeng,9) == 0)
+			{
+				duer::YTMediaManager::instance().play_data(YT_DOG,sizeof(YT_DOG)/sizeof(YT_DOG[0]),duer::MEDIA_FLAG_DOG_DATA);
+				break;
+			}	
+			else if(memcmp(nlp_result->input_text, p_tiaogewu,9) == 0)
+			{
+				spi_local_init();
+				unsigned int  addr = 0x00000000;	
+				int len = 0;	
+				spi_local_getrandom(&addr,&len);	
+				duer::YTMediaManager::instance().play_data((const char *)&addr,len,duer::MEDIA_FLAG_LOCAL | duer::MEDIA_FLAG_LOCAL_MODE | duer::MEDIA_FLAG_SPI_DATA | duer::MEDIA_FLAG_SPI_DATA_NO_CON);
+				break;
+				//DEBUG_LOGE(LOG_TAG, "nlp_result->input_text : %s",nlp_result->input_text);
+				//memset(nlp_result->input_text,0,sizeof(nlp_result->input_text));
+				//memcpy(nlp_result->input_text,p_changshouge,sizeof(p_changshouge));
+				//DEBUG_LOGE(LOG_TAG, "nlp_result->input_text : %s",nlp_result->input_text);
+			}
+		#endif
+			
 			
 			if(NO_ASR_TIMES <= 2) 
 			{
@@ -1105,6 +1131,8 @@ void play_next()
 	PlayLocal::instance().getNextFilePath(path);
 	duer::YTMediaManager::instance().play_local(path,duer::MEDIA_FLAG_LOCAL | duer::MEDIA_FLAG_LOCAL_MODE);
 #else	/// spi flash mode
+	spi_local_init();
+
 	DEBUG_LOGI(LOG_TAG, "play_next");
 	unsigned int  addr = 0x00000000;	
 	int len = 0;	
@@ -1117,6 +1145,8 @@ void play_next()
 
 void set_action()
 {	
+
+#if 1
 	bool bEnable = duer::get_status();
 	bool bIsPlaying = duer::YTMediaManager::instance().is_playing();
 	
@@ -1132,6 +1162,9 @@ void set_action()
 		duer::stop_pwm_machine();
 		duer::set_status(!bEnable);
 	}
+#else
+	duer::YTMediaManager::instance().play_data(YT_DOG,sizeof(YT_DOG)/sizeof(YT_DOG[0]),duer::MEDIA_FLAG_DOG_DATA);
+#endif
 }
 
 
