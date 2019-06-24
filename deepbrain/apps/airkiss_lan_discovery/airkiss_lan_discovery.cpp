@@ -119,7 +119,7 @@ static int create_udp_socket(void)
     err = bind(sock, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in));
     if (err < 0) 
 	{
-       	DEBUG_LOGE(LOG_TAG, "Failed to bind socket.");
+       	DEBUG_LOGE(LOG_TAG, "Failed to bind socket. err %d",err);
         goto create_udp_socket_err;
     }
     

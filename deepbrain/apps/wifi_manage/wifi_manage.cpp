@@ -864,6 +864,7 @@ APP_FRAMEWORK_ERRNO_t wifi_manage_start_airkiss(void)
 	#ifdef AIRKISS	
 		rda5981_stop_airkiss();	
 	#else
+		rtAirkiss.stop();
 		Airkiss::Instance().AirkissStop();
 	#endif
 		//duer::YTMediaManager::instance().play_data(YT_AIRKISS_OUT, sizeof(YT_AIRKISS_OUT), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);	

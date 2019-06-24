@@ -1247,10 +1247,12 @@ void entry_magic()
 	duer::YTMediaManager::instance().stop();
 	duer::YTMediaManager::instance().stop_completely();
 	duer::YTMediaManager::instance().clear_queue();
+#if 0	
 	airkiss_lan_discovery_delete();
 	asr_service_delete();
 	mpush_service_delete();  
 	authorize_service_delete(); 
+#endif
 	memory_info();	
 	entry_new_mode(dcl_mode);
 }
@@ -1289,10 +1291,12 @@ void exit_magic()
 	magic_amrnb_data = NULL;
 	memory_info();
 	duer::duer_recorder_reinit();
+#if 0	
 	airkiss_lan_discovery_create(TASK_PRIORITY_1);
 	asr_service_create(TASK_PRIORITY_1);
 	mpush_service_create(TASK_PRIORITY_1); 
 	authorize_service_create(TASK_PRIORITY_1);	
+#endif
 	yt_dcl_start(); 
 	memory_info();
 }
