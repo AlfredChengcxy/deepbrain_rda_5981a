@@ -10,7 +10,11 @@
 #include "inet.h"
 #include "WiFiStackInterface.h"
 #include "rda5981_sniffer.h"
+#ifdef AIRKISS
 #include "rda_airkiss.h"
+#else
+#include "AirkissNet.h"
+#endif
 #include "rda_sys_wrapper.h"
 #include "YTManage.h"
 #include "audio.h"
@@ -223,6 +227,7 @@ bool wifi_connect(const DEVICE_WIFI_INFO_T *wifi_info)
 		return false;
 	}
 
+	g_wifi_manage_handle->wifi_handler->disconnect();
 	int ret = g_wifi_manage_handle->wifi_handler->connect(wifi_info->wifi_ssid, wifi_info->wifi_passwd, NULL, NSAPI_SECURITY_NONE);
     if (ret == 0) 
 	{
@@ -425,8 +430,11 @@ void net_connected(bool b_connect);
 void AirkissTimeOut(void const *argument)
 {
 	DEBUG_LOGI(LOG_TAG, "AirkissTimeOut");	
-	rda5981_stop_airkiss();
-	
+#ifdef AIRKISS		
+	rda5981_stop_airkiss();	
+#else
+	Airkiss::Instance().AirkissStop();
+#endif
 	{
 		DEBUG_LOGI(LOG_TAG, "YT_DB_WIFI_AIRKISS_NOT_COMALETE");
 		duer::YTMediaManager::instance().play_data(YT_DB_WIFI_AIRKISS_NOT_COMALETE, sizeof(YT_DB_WIFI_AIRKISS_NOT_COMALETE), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);
@@ -442,7 +450,31 @@ void AirkissTimeOut(void const *argument)
 
 rtos::RtosTimer rtAirkiss(AirkissTimeOut,osTimerOnce,NULL);
 
+#ifndef AIRKISS
+class AirkissEvent:public Airkiss::IOnEvent
+{
+	virtual int on_airkiss_wait()
+	{
+	
+	}
+	virtual int on_airkiss_connect()
+	{
+	
+	}
+	virtual int on_airkiss_finish(char * strSSID,char * strPWD)
+	{
+		DEBUG_LOGI(LOG_TAG, "start_wifi_airkiss_mode success");	
+		memcpy(g_wifi_manage_handle->curr_wifi.wifi_ssid,strSSID,strlen(strSSID));
+		memcpy(g_wifi_manage_handle->curr_wifi.wifi_passwd,strPWD,strlen(strPWD));
+		duer::YTMediaManager::instance().stop();
+		rtAirkiss.stop();
+		set_wifi_manage_status(WIFI_MANAGE_STATUS_AIRKISS_CONNECTING);
+	}
+};
 
+AirkissEvent *pEvent =NULL;
+
+#endif
 
 
 static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
@@ -570,9 +602,10 @@ static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
 			task_thread_sleep(5000);			
 			duer::YTMediaManager::instance().play_data(YT_DB_WIFI_CONNECTING_TONE_LONG, sizeof(YT_DB_WIFI_CONNECTING_TONE_LONG), duer::MEDIA_FLAG_PROMPT_TONE);	
 #else		
-			g_wifi_manage_handle->wifi_handler->disconnect();
-			app_send_message(APP_NAME_WIFI_MANAGE, APP_MSG_TO_ALL, APP_EVENT_WIFI_DISCONNECTED, NULL, 0);	
-
+			app_send_message(APP_NAME_WIFI_MANAGE, APP_MSG_TO_ALL, APP_EVENT_WIFI_DISCONNECTED, NULL, 0);
+			task_thread_sleep(1000);
+			DEBUG_LOGI(LOG_TAG, "wifi_handler:disconnect");
+			g_wifi_manage_handle->wifi_handler->disconnect();			
 			duer::YTMediaManager::instance().play_data(YT_DB_WIFI_CONNECTING_TONE_LONG, sizeof(YT_DB_WIFI_CONNECTING_TONE_LONG), duer::MEDIA_FLAG_PROMPT_TONE);	
 #endif
 
@@ -585,7 +618,7 @@ static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
 
 			deepbrain::RegistWifi();
 			deepbrain::RegistRec();
-			
+		#ifdef AIRKISS	
 			if (get_ssid_pw_from_airkiss(g_wifi_manage_handle->curr_wifi.wifi_ssid,g_wifi_manage_handle->curr_wifi.wifi_passwd) == 0)
 			{				
 				DEBUG_LOGI(LOG_TAG, "start_wifi_airkiss_mode success");	
@@ -604,7 +637,10 @@ static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
 				break;
 				set_wifi_manage_status(WIFI_MANAGE_STATUS_IDLE);
 			}
-			
+		#else
+			Airkiss::Instance().AirkissStart();
+		#endif
+		
 			break;
 		}
 		case WIFI_MANAGE_STATUS_AIRKISS_CONNECTING:
@@ -613,8 +649,12 @@ static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
             if ((strlen(handle->curr_wifi.wifi_ssid) > 0) &&
 				wifi_connect(&handle->curr_wifi))
             {	        
-            	handle->connecting_start_time = get_time_of_day();				
+            	handle->connecting_start_time = get_time_of_day();	
+			#ifdef AIRKISS	
 				airkiss_sendrsp_to_host(g_wifi_manage_handle->wifi_handler);
+			#else
+				Airkiss::Instance().AirkissFinish();
+			#endif
 				set_wifi_manage_status(WIFI_MANAGE_STATUS_AIRKISS_CONNECT_SUCCESS);
 				DEBUG_LOGI(LOG_TAG, "connecting wifi [%s]:[%s]", 
 					handle->curr_wifi.wifi_ssid, handle->curr_wifi.wifi_passwd);
@@ -771,7 +811,13 @@ APP_FRAMEWORK_ERRNO_t wifi_manage_create(const int task_priority)
 
 	g_wifi_manage_handle->wifi_handler->init();
 	g_wifi_manage_handle->wifi_handler->set_msg_queue(g_wifi_manage_handle->wifi_msg_queue);
-	
+
+#ifndef AIRKISS
+	Airkiss::Instance().Init(g_wifi_manage_handle->wifi_handler);
+	if(NULL == pEvent)pEvent = new AirkissEvent;
+	Airkiss::Instance().SetEventListener(pEvent);
+#endif
+
 	SEMPHR_CREATE_LOCK(g_wifi_manage_handle->mutex_lock);
 
 	if (!( g_thWifi =(rtos::Thread *) task_thread_create(task_wifi_manage,
@@ -815,7 +861,11 @@ APP_FRAMEWORK_ERRNO_t wifi_manage_start_airkiss(void)
 	if (is_wifi_airkiss_mode())
 	{
 		DEBUG_LOGI(TAG_LOG,"is_wifi_airkiss_mode\r\n");
+	#ifdef AIRKISS	
 		rda5981_stop_airkiss();	
+	#else
+		Airkiss::Instance().AirkissStop();
+	#endif
 		//duer::YTMediaManager::instance().play_data(YT_AIRKISS_OUT, sizeof(YT_AIRKISS_OUT), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);	
 		
 		duer::YTMediaManager::instance().play_data(YT_CONNTING_NET, sizeof(YT_CONNTING_NET), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);	

@@ -205,6 +205,7 @@ static APP_FRAMEWORK_ERRNO_t app_object_send_msg(
 			DEBUG_LOGE(TAG_LOG, "[%s]APP_API_MALLOC event_data[%d] failed", __FUNCTION__, msg->event_data_len);
 			return APP_FRAMEWORK_ERRNO_MALLOC_FAILED;
 		}
+		
 		memcpy(qe->msg.event_data, msg->event_data, msg->event_data_len);
 	}
 
