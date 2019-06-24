@@ -40,7 +40,8 @@ public:
 
     static const size_t MIN_BUFFER_SIZE = 1*1024;//5 * 1024;
 
-    static const size_t DEFAULT_BUFFER_SIZE = 2 * 1024;//10 * 1024;
+    //static const size_t DEFAULT_BUFFER_SIZE = 2 * 1024;//10 * 1024;
+	static const size_t DEFAULT_BUFFER_SIZE = 2 * 1024;//10 * 1024;
 
 private:
     MediaPlayBuffer(const MediaPlayBuffer&);

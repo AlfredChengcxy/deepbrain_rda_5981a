@@ -387,6 +387,9 @@ DCL_ERROR_CODE_t dcl_asr_session_begin(
 	if (handler == NULL)
 	{
 		DEBUG_LOGE(TAG_LOG, "dcl_tts_session_begin malloc failed");
+		DEBUG_LOGE(TAG_LOG,"sizeof(DCL_ASR_HANDLE_t) : %d",sizeof(DCL_ASR_HANDLE_t));
+		memory_info();
+		
 		return DCL_ERROR_CODE_SYS_NOT_ENOUGH_MEM;
 	}
 	memset(handler, 0, sizeof(DCL_ASR_HANDLE_t));

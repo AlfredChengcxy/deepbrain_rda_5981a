@@ -29,7 +29,7 @@ static Thread s_vbat_thread(osPriorityNormal, 1024 * 2);
 const unsigned int vbat_low_power_alert_times = 5*60*1000; 
 const unsigned int low_power_max_cnt = 5; 
 
-const int low_val = /*610*/510;
+const int low_val = 610/*510*/;
 
 static bool bVbatRun=true;
 static VBAT_SCENE _vbat_status = VBAT_FULL;

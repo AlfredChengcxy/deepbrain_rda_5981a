@@ -61,10 +61,10 @@ static duer::YTGpadcKey s_volume_up_button(KEY_B2);
 static duer::YTGpadcKey s_wifi_bt_button(KEY_B3);
 static duer::YTGpadcKey s_play_pause_button(KEY_B0);
 #elif KMT_PCBA
-static duer::YTGpadcKey s_button4(KEY_B5);// long (wechat)			short (play wechat)			4ºÅ¼ü
-static duer::YTGpadcKey s_button3(KEY_B4);// long (action) 		short (volume ctl)    			3ºÅ¼ü
-static duer::YTGpadcKey s_button2(KEY_B3);// long (model)			short (next/pause)				2ºÅ¼ü
-static duer::YTGpadcKey s_button1(KEY_B0);// long (awake)			short (net)					1ºÅ¼ü
+static duer::YTGpadcKey s_button4(/*KEY_B5*/KEY_B3);// long (wechat)			short (play wechat)			4ºÅ¼ü
+static duer::YTGpadcKey s_button3(/*KEY_B4*/KEY_B2);// long (action) 		short (volume ctl)    			3ºÅ¼ü
+static duer::YTGpadcKey s_button2(/*KEY_B3*/KEY_B1);// long (model)			short (next/pause)				2ºÅ¼ü
+static duer::YTGpadcKey s_button1(/*KEY_B0*/KEY_B0);// long (awake)			short (net)					1ºÅ¼ü
 #endif
 
 
@@ -1544,7 +1544,7 @@ void btn3_rise_handle()
 
 void btn3_long_handle()
 {	
-	if(dcl_mode == DEEPBRAIN_MODE_ASR || dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL)
+	if(dcl_mode == DEEPBRAIN_MODE_ASR || dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL ||dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE)
 	{	
 		duer::event_trigger(duer::EVT_KEY_ENABLE_ACTION);
 	}
@@ -1619,6 +1619,7 @@ void entry_new_mode(int new_mode,bool need_prompt)
 			s_button3.fall(NULL);
 			s_button3.rise(NULL);
 			s_button3.longpress(NULL,0,-1);
+			s_button3.longpress(&btn3_long_handle, 2000, duer::YT_LONG_KEY_ONCE);
 			s_button4.fall(NULL);
 			s_button4.rise(NULL);
 			s_button4.longpress(NULL,0,-1);
@@ -1660,7 +1661,11 @@ void entry_new_mode(int new_mode,bool need_prompt)
 			s_button4.rise(NULL);
 			s_button4.longpress(NULL,0,-1);
 			if(need_prompt)
-			duer::YTMediaManager::instance().play_data(YT_ENTRY_LOCAL_MODE,sizeof(YT_ENTRY_LOCAL_MODE), duer::MEDIA_FLAG_LOCAL_MODE);
+				duer::YTMediaManager::instance().play_data(YT_ENTRY_LOCAL_MODE,sizeof(YT_ENTRY_LOCAL_MODE), duer::MEDIA_FLAG_LOCAL_MODE);
+			else
+			{
+				duer::event_trigger(duer::EVT_KEY_PLAY_NEXT);
+			}
 		}
 		break;
 	}

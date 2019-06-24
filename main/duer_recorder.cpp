@@ -364,6 +364,7 @@ static void duer_amr_thread_main()
 #else
 	duer_amr_thread->signal_wait(0x01);
 #endif
+	DUER_LOGI("duer_amr_thread_main start1");
 
 	while(_state == DUER_REC_STARTED)
 	{
@@ -407,6 +408,9 @@ static void duer_rec_thread_main()
 #else
 	duer_amr_thread->signal_set(0x01);
 #endif
+
+	DUER_LOGI("duer_rec_thread_main start1");
+
 	//memcpy(p_cur, amr_head, strlen(amr_head));
 	//p_cur += strlen(amr_head);
 	
@@ -426,9 +430,10 @@ static void duer_rec_thread_main()
         p_cur += rs;
     }
 exit:
+	DUER_LOGI("duer_rec_thread_main stop0");
 	YTMediaManager::instance().rec_stop();
-
 	_state = DUER_REC_STOPPED;
+	DUER_LOGI("duer_rec_thread_main stop1");
 }
 
 void duer_recorder_set_vad(bool need_vad)

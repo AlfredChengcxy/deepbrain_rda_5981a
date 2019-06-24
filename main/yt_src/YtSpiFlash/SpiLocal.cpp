@@ -192,7 +192,7 @@ static void write_file()
 void spi_local_init()
 {
 	if(gInit == true) return;
-#if 1   //// 优先判断是否写入,如已经写入信息则不必写入
+#if 1//DEBUG_DATA   //// 优先判断是否写入,如已经写入信息则不必写入
 	int num = read_file_header();
 	printf("num:[%d]\r\n",num);
 	if(num == 0)write_file();
@@ -212,7 +212,7 @@ void spi_local_getrandom(uint32_t *paddr,int *nlen)
 	gCurentIndex = rand() % ahs.total;
 	*paddr = ahs.ah[gCurentIndex].addr;
 	*nlen = ahs.ah[gCurentIndex].len;
-#if 1//DEBUG_DATA
+#if DEBUG_DATA
 	printf("addr:[%x]\r\n",*paddr);
 	printf("index:[%d],gCurentIndex:[%d]\r\n",ahs.ah[gCurentIndex].index,gCurentIndex);
 	printf("len:[%d]\r\n",*nlen);
@@ -225,7 +225,7 @@ void spi_local_getnext(uint32_t *paddr,int *nlen)
 	if(!gInit)return;
 	*paddr = ahs.ah[gCurentIndex].addr;
 	*nlen = ahs.ah[gCurentIndex].len;
-#if 1//DEBUG_DATA
+#if DEBUG_DATA
 	printf("addr:[%x]\r\n",*paddr);
 	printf("index:[%d],gCurentIndex:[%d]\r\n",ahs.ah[gCurentIndex].index,gCurentIndex);
 	printf("len:[%d]\r\n",*nlen);
@@ -239,7 +239,7 @@ void spi_local_getpre(uint32_t *paddr,int *nlen)
 	if(!gInit)return;
 	*paddr = ahs.ah[gCurentIndex].addr;
 	*nlen = ahs.ah[gCurentIndex].len;
-#if 1//DEBUG_DATA	
+#if DEBUG_DATA	
 	printf("addr:[%x]\r\n",*paddr);
 	printf("index:[%d],gCurentIndex:[%d]\r\n",ahs.ah[gCurentIndex].index,gCurentIndex);
 	printf("len:[%d]\r\n",*nlen);	
@@ -252,7 +252,7 @@ void spi_local_get_frame(uint32_t  addr,char *pdata,int nlen)
 {
 	if(!gInit)return;
 	
-#if 1//DEBUG_DATA	
+#if DEBUG_DATA	
 	printf("addr:[%x]\r\n",addr);	
 #endif
 	//addr = 0x2700;

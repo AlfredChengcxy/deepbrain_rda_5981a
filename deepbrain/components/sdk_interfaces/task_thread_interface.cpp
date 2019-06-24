@@ -40,7 +40,6 @@ void task_thread_exit(void * pThread)
 	if(pThread)
 	{
 		printf("%d,delete thread \r\n",((rtos::Thread *)pThread)->get_state());
-		
 		delete (rtos::Thread *)pThread;
 	}
 	pThread = NULL;

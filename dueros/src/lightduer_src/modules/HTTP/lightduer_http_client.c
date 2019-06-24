@@ -819,7 +819,7 @@ static duer_http_result_t duer_http_recv_headers_and_parse(duer_http_client_t *p
                     value++;
             }
 
-            DUER_LOGI("Read header (%s: %s)", key, value);
+            DUER_LOGD("Read header (%s: %s)", key, value);
 
             if (!DUER_STRNCASECMP(key, "Content-Length", max_len)) {
                 DUER_SSCANF(value, "%d", &http_content_len);
