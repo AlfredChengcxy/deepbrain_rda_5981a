@@ -426,6 +426,7 @@ extern void yt_dcl_start();
 extern void RegistWifi();
 extern void RegistRec();
 void net_connected(bool b_connect);
+extern bool in_wifi_mode();
 }
 void AirkissTimeOut(void const *argument)
 {
@@ -433,6 +434,7 @@ void AirkissTimeOut(void const *argument)
 #ifdef AIRKISS		
 	rda5981_stop_airkiss();	
 #else
+	set_wifi_manage_status(WIFI_MANAGE_STATUS_IDLE);///add
 	Airkiss::Instance().AirkissStop();
 #endif
 	{
@@ -572,6 +574,9 @@ static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
 			switch(msg)
 			{
 				case MAIN_RECONNECT:
+					//add(其他模式下断网不重连)
+					if(!deepbrain::in_wifi_mode())break;
+					
 					DEBUG_LOGI(LOG_TAG, "rda_msg_get reconnect");
 					g_wifi_manage_handle->wifi_handler->disconnect();
 					set_wifi_manage_status(WIFI_MANAGE_STATUS_STA_DISCONNECTED);

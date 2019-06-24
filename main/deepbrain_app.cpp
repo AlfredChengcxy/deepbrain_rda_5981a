@@ -107,6 +107,10 @@ bool is_magic_voice_mode()
 	return (dcl_mode == deepbrain::DEEPBRAIN_MODE_MAGIC_VOICE);
 }
 
+bool in_wifi_mode()
+{
+	return (dcl_mode == deepbrain::DEEPBRAIN_MODE_ASR)
+}
 
 
 bool yt_dcl_process_stop_chat(NLP_RESULT_T *nlp_result)
@@ -1548,7 +1552,7 @@ void btn3_rise_handle()
 
 void btn3_long_handle()
 {	
-	if(dcl_mode == DEEPBRAIN_MODE_ASR || dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL ||dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE)
+	if(dcl_mode == DEEPBRAIN_MODE_ASR || dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL ||dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE ||dcl_mode ==DEEPBRAIN_MODE_BT)
 	{	
 		duer::event_trigger(duer::EVT_KEY_ENABLE_ACTION);
 	}
@@ -1605,6 +1609,8 @@ void entry_new_mode(int new_mode,bool need_prompt)
 			s_button3.fall(NULL);
 			s_button3.rise(NULL);
 			s_button3.longpress(NULL,0,-1);
+			//add
+			s_button3.longpress(&btn3_long_handle, 2000, duer::YT_LONG_KEY_ONCE);
 			s_button4.fall(NULL);
 			s_button4.rise(NULL);
 			s_button4.longpress(NULL,0,-1);
@@ -1623,6 +1629,7 @@ void entry_new_mode(int new_mode,bool need_prompt)
 			s_button3.fall(NULL);
 			s_button3.rise(NULL);
 			s_button3.longpress(NULL,0,-1);
+			//add
 			s_button3.longpress(&btn3_long_handle, 2000, duer::YT_LONG_KEY_ONCE);
 			s_button4.fall(NULL);
 			s_button4.rise(NULL);

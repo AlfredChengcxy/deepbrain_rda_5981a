@@ -494,7 +494,21 @@ static void asr_service_destroy(void)
 		SEMPHR_DELETE_LOCK(g_asr_service_handle->mutex_lock);
 		g_asr_service_handle->mutex_lock = NULL;
 	}
-	
+#if 0	
+	//free socket
+	if (((DCL_ASR_HANDLE_t *)(g_asr_service_handle->dcl_asr_handle))->http_buffer->sock != INVALID_SOCK)
+	{
+		sock_close(((DCL_ASR_HANDLE_t *)(g_asr_service_handle->dcl_asr_handle))->http_buffer->sock);
+		((DCL_ASR_HANDLE_t *)(g_asr_service_handle->dcl_asr_handle))->http_buffer->sock = INVALID_SOCK;
+	}
+
+	//free json object
+	if (((DCL_ASR_HANDLE_t *)(g_asr_service_handle->dcl_asr_handle))->http_buffer->cjson != NULL)
+	{
+		cJSON_Delete((cJSON*)((DCL_ASR_HANDLE_t *)(g_asr_service_handle->dcl_asr_handle))->http_buffer->cjson);
+		((DCL_ASR_HANDLE_t *)(g_asr_service_handle->dcl_asr_handle))->http_buffer->cjson = NULL;
+	}
+#endif	
 	memory_free(g_asr_service_handle);
 	g_asr_service_handle = NULL;
 }

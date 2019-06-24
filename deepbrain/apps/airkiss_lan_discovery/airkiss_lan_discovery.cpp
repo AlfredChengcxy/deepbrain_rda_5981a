@@ -75,18 +75,7 @@ const airkiss_config_t akconf =
 	0
 };
 
-static void airkiss_lan_discovery_destroy(void)
-{
-	if (g_airkiss_lan_discovery_handle == NULL)
-	{
-		return;
-	}
 
-	memory_free(g_airkiss_lan_discovery_handle);
-	g_airkiss_lan_discovery_handle = NULL;
-
-	return;
-}
 
 static int create_udp_socket(void)
 {
@@ -199,6 +188,10 @@ static void recv_udp_packet(AIRKISS_LAN_DISCOVERY_HANDLE_t *handle)
 	}
 }
 
+
+
+
+
 static void delete_udp_socket(int sock)
 {
 	if (sock >= 0)
@@ -286,6 +279,26 @@ static void airkiss_lan_discovery_event_callback(
 			break;
 	}
 }
+
+
+
+static void airkiss_lan_discovery_destroy(void)
+{
+	if (g_airkiss_lan_discovery_handle == NULL)
+	{
+		return;
+	}
+	if (g_airkiss_lan_discovery_handle->mutex_lock != NULL)
+	{
+		SEMPHR_DELETE_LOCK(g_airkiss_lan_discovery_handle->mutex_lock);
+		g_airkiss_lan_discovery_handle->mutex_lock = NULL;
+	}	
+	delete_udp_socket(g_airkiss_lan_discovery_handle->udp_socket);	
+	memory_free(g_airkiss_lan_discovery_handle);
+	g_airkiss_lan_discovery_handle = NULL;
+	return;
+}
+
 
 static void task_airkiss_lan_discovery(void)
 {		
