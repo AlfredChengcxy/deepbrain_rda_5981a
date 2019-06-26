@@ -439,9 +439,11 @@ void AirkissTimeOut(void const *argument)
 #endif
 	{
 		DEBUG_LOGI(LOG_TAG, "YT_DB_WIFI_AIRKISS_NOT_COMALETE");	
-		duer::YTMediaManager::instance().play_data(YT_DB_WIFI_AIRKISS_NOT_COMALETE, sizeof(YT_DB_WIFI_AIRKISS_NOT_COMALETE), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);
-		set_wifi_manage_status(WIFI_MANAGE_STATUS_IDLE);
 		deepbrain::yt_dcl_start();	
+		if(!deepbrain::in_wifi_mode())return;
+		
+		duer::YTMediaManager::instance().play_data(YT_DB_WIFI_AIRKISS_NOT_COMALETE, sizeof(YT_DB_WIFI_AIRKISS_NOT_COMALETE), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);
+		set_wifi_manage_status(WIFI_MANAGE_STATUS_IDLE);	
 		task_thread_sleep(5000);
 		deepbrain::net_connected(false);
 		return ;	
@@ -483,6 +485,8 @@ static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
 	{
 		return;
 	}
+	
+	if(!deepbrain::in_wifi_mode())return;
 
 	switch(handle->status)
     {
@@ -572,9 +576,7 @@ static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
 			switch(msg)
 			{
 				case MAIN_RECONNECT:
-					//add(其他模式下断网不重连)
-					if(!deepbrain::in_wifi_mode())break;
-					
+									
 					DEBUG_LOGI(LOG_TAG, "rda_msg_get reconnect");
 					g_wifi_manage_handle->wifi_handler->disconnect();
 					set_wifi_manage_status(WIFI_MANAGE_STATUS_STA_DISCONNECTED);
@@ -588,6 +590,8 @@ static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
 		}
 		case WIFI_MANAGE_STATUS_STA_DISCONNECTED:
 		{
+			//add(其他模式下断网不重连)
+			
 			duer::YTMediaManager::instance().play_data(YT_DB_WIFI_DISCONNECT, sizeof(YT_DB_WIFI_DISCONNECT), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);				
 			task_thread_sleep(3000);
 			//audio_play_tone_mem(FLASH_MUSIC_NETWORK_DISCONNECTED, AUDIO_TERM_TYPE_NOW);
@@ -857,9 +861,24 @@ APP_FRAMEWORK_ERRNO_t wifi_manage_destory(void)
 	g_wifi_manage_handle = NULL;	
 }
 
+APP_FRAMEWORK_ERRNO_t wifi_reconn()
+{
+	DEBUG_LOGI(TAG_LOG,"wifi_reconn");
+	int status = get_wifi_manage_status();
+	DEBUG_LOGI(TAG_LOG,"get_wifi_manage_status:%d",status);
+	if(status >= WIFI_MANAGE_STATUS_AIRKISS) return APP_FRAMEWORK_ERRNO_OK;
+	if(status == WIFI_MANAGE_STATUS_STA_CONNECTING) return APP_FRAMEWORK_ERRNO_OK;
+	
+	{
+		DEBUG_LOGI(TAG_LOG,"set WIFI_MANAGE_STATUS_STA_CONNECTING");
+		set_wifi_manage_status(WIFI_MANAGE_STATUS_STA_CONNECTING);	
+	}
+	return APP_FRAMEWORK_ERRNO_OK;
+}
+
 APP_FRAMEWORK_ERRNO_t wifi_manage_start_airkiss(void)
 {
-	printf("wifi_manage_start_airkiss\r\n");
+	DEBUG_LOGI(TAG_LOG,"wifi_manage_start_airkiss\r\n");
 	
 	if (is_wifi_airkiss_mode())
 	{

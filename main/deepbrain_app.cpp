@@ -1237,6 +1237,11 @@ void entry_wifi()
 {
 	dcl_mode = DEEPBRAIN_MODE_ASR;
 	entry_new_mode(dcl_mode);
+	if(!is_wifi_connected())
+	{
+		//duer::event_trigger(duer::EVT_RESET_WIFI);
+		wifi_reconn();
+	}
 }
 
 void exit_wifi()
@@ -1258,7 +1263,7 @@ void entry_magic()
 	DEBUG_LOGE(LOG_TAG, "enter magic mode");		
 	memory_info();
 	rec_mode = DEEPBRAIN_MODE_MAGIC_VOICE;
-	yt_dcl_stop();
+	//yt_dcl_stop();
 	duer::duer_recorder_set_vad(true);
 	bExitMagicData = false;
 	duer::YTMediaManager::instance().stop();
@@ -1314,7 +1319,7 @@ void exit_magic()
 	mpush_service_create(TASK_PRIORITY_1); 
 	authorize_service_create(TASK_PRIORITY_1);	
 #endif
-	yt_dcl_start(); 
+	//yt_dcl_start(); 
 	memory_info();
 }
 
@@ -1529,6 +1534,7 @@ void switch_wifi_magic_mode()
 
 void btn1_fall_handle()
 {
+	DEBUG_LOGI(LOG_TAG, "btn1_fall_handle");
 	if(dcl_mode == DEEPBRAIN_MODE_ASR|| dcl_mode ==DEEPBRAIN_MODE_AIRKISS)
 	{
 		duer::event_trigger(duer::EVT_KEY_REC_PRESS);
@@ -1537,6 +1543,7 @@ void btn1_fall_handle()
 
 void btn1_rise_handle()
 {
+	DEBUG_LOGI(LOG_TAG, "btn1_rise_handle");
 	if(dcl_mode == DEEPBRAIN_MODE_ASR|| dcl_mode ==DEEPBRAIN_MODE_AIRKISS)
 	{
 		duer::event_trigger(duer::EVT_KEY_REC_RELEASE);
@@ -1545,6 +1552,7 @@ void btn1_rise_handle()
 
 void btn1_long_handle()
 {
+	DEBUG_LOGI(LOG_TAG, "btn1_long_handle");
 	if(dcl_mode == DEEPBRAIN_MODE_ASR|| dcl_mode ==DEEPBRAIN_MODE_AIRKISS)
 	{
 		duer::event_trigger(duer::EVT_RESET_WIFI);	
@@ -1555,6 +1563,7 @@ void btn1_long_handle()
 
 void btn2_fall_handle()
 {
+	DEBUG_LOGI(LOG_TAG, "btn2_fall_handle");
 	if(dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL)
 	{
 		duer::event_trigger(duer::EVT_KEY_PLAY_NEXT);
@@ -1563,11 +1572,12 @@ void btn2_fall_handle()
 
 void btn2_rise_handle()
 {
-
+	DEBUG_LOGI(LOG_TAG, "btn2_rise_handle");
 }
 
 void btn2_long_handle()
 {
+	DEBUG_LOGI(LOG_TAG, "btn2_long_handle");
 	duer::event_trigger(duer::EVT_KEY_SWITCH_MODE);	
 }
 
@@ -1575,11 +1585,12 @@ void btn2_long_handle()
 
 void btn3_fall_handle()
 {
-
+	DEBUG_LOGI(LOG_TAG, "btn3_fall_handle");
 }
 
 void btn3_rise_handle()
 {
+	DEBUG_LOGI(LOG_TAG, "btn3_rise_handle");
 	if(dcl_mode == DEEPBRAIN_MODE_ASR || dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL || dcl_mode ==DEEPBRAIN_MODE_AIRKISS )
 	{
 		duer::event_trigger(duer::EVT_KEY_VOLUME_PRESS);	
@@ -1588,6 +1599,7 @@ void btn3_rise_handle()
 
 void btn3_long_handle()
 {	
+	DEBUG_LOGI(LOG_TAG, "btn3_long_handle");
 	if(dcl_mode == DEEPBRAIN_MODE_ASR || dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL ||dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE ||dcl_mode ==DEEPBRAIN_MODE_BT || dcl_mode ==DEEPBRAIN_MODE_AIRKISS)
 	{	
 		duer::event_trigger(duer::EVT_KEY_ENABLE_ACTION);

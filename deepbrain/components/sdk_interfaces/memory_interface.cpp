@@ -20,7 +20,7 @@
 
 #define LOG_TAG "memory"
 
-#define MEMORY_INFO_DEBUG_ENABLE 1
+#define MEMORY_INFO_DEBUG_ENABLE 0
 
 void *memory_malloc(const uint32_t mem_size)
 {

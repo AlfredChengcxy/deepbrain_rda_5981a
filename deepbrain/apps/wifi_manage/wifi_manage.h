@@ -96,6 +96,7 @@ APP_FRAMEWORK_ERRNO_t wifi_manage_destory(void);
  * @return app framework errno
  */	
 APP_FRAMEWORK_ERRNO_t wifi_manage_start_airkiss(void);
+APP_FRAMEWORK_ERRNO_t wifi_reconn();
 
 bool wifi_connect(const DEVICE_WIFI_INFO_T *wifi_info);
 

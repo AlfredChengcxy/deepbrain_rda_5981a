@@ -143,7 +143,7 @@ int main()
     duer::MediaManager::instance().initialize();
 	duer::YTMediaManager::instance().init();
 
-    duer::YTMediaManager::instance().set_volume(duer::DEFAULT_VOLUME/*10*/);	
+    duer::YTMediaManager::instance().set_volume(/*duer::DEFAULT_VOLUME*/10);	
 
 #if 0//chenjl add 20190317
 	if(vbat_check_startup())
