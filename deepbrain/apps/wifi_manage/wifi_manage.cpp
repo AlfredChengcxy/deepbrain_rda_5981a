@@ -438,14 +438,12 @@ void AirkissTimeOut(void const *argument)
 	Airkiss::Instance().AirkissStop();
 #endif
 	{
-		DEBUG_LOGI(LOG_TAG, "YT_DB_WIFI_AIRKISS_NOT_COMALETE");
+		DEBUG_LOGI(LOG_TAG, "YT_DB_WIFI_AIRKISS_NOT_COMALETE");	
 		duer::YTMediaManager::instance().play_data(YT_DB_WIFI_AIRKISS_NOT_COMALETE, sizeof(YT_DB_WIFI_AIRKISS_NOT_COMALETE), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);
 		set_wifi_manage_status(WIFI_MANAGE_STATUS_IDLE);
-		deepbrain::yt_dcl_start();
-		
+		deepbrain::yt_dcl_start();	
 		task_thread_sleep(5000);
 		deepbrain::net_connected(false);
-
 		return ;	
 	}
 }
