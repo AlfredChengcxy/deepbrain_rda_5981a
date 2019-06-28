@@ -21,9 +21,13 @@ enum MediaPlayerCmd {
 
 enum MediaVolumeRange {
     //MIN_VOLUME = 25,
-    MIN_VOLUME = 0,
+    
+    VOLUME_LEVEL = 4,
+    UNIT_VOLUME = 25,
+    
+    MIN_VOLUME = 25,
     DEFAULT_VOLUME = 50,
-    MAX_VOLUME = /*80*/100,
+    MAX_VOLUME = 100,
 };
 
 struct MediaPlayerMessage {

@@ -32,7 +32,16 @@
 *******************************************************************/
 #define PLATFORM_NAME		"RDA5981"
 #define DEVICE_SN_PREFIX	"YIYU"
-#define ESP32_FW_VERSION	"V1.0.0build20181129"
+
+/*
+修改一下 ESP32_FW_VERSION 并保持该version 与 version.txt中的 version 相同
+在将生成的main_ota_1001_upgrade.bin(注意修改ota3_ota_12.bat中的版本号)和新的version.txt在服务器上更新下
+
+
+值得注意的是 初次烧入带boolloader的bin 的version 与ota服务器上的version不能相同
+*/
+
+#define ESP32_FW_VERSION	"V1.0.8build20190628"
 
 //demo鐜
 #if DCL_DEMO_ENV == 1
@@ -65,7 +74,15 @@
 //OTA鍗囩骇鏈嶅姟鍣ㄥ湴鍧�
 //#define OTA_UPDATE_SERVER_URL		"http://file.yuyiyun.com:2088/ota/PJ-20180830-0002-aixiaobei/version.txt"
 //#define OTA_UPDATE_SERVER_URL		"http://192.168.1.153/firmware/version.txt"
+#if DCL_SF_ENV == 1
 #define OTA_UPDATE_SERVER_URL		"http://file.yuyiyun.com:2088/ota/PJ-20190222-0001-zhuxiaopi/version.txt"
+#endif
+
+#if DCL_KMT_ENV == 1
+#define OTA_UPDATE_SERVER_URL		"http://211.152.53.233/RDA_Yiyu_OTA_Bin/version.txt"
+#endif
+
+
 
 //OTA鍗囩骇鏈嶅姟鍣ㄦ祴璇曞湴鍧�
 #define OTA_UPDATE_SERVER_URL_TEST	"http://file.yuyiyun.com:2088/ota/test/PJ-20180830-0002-aixiaobei/version.txt"

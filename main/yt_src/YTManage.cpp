@@ -230,6 +230,7 @@ void rtMotorRun(void const *argument)
 
 
 static bool bEnable = true;
+static bool bRunning = false;
 
 void set_status(bool _enable)
 {
@@ -241,6 +242,10 @@ bool get_status()
 	return bEnable;
 }
 
+bool get_run_status()
+{
+	return bRunning;
+}
 
 void stop_pwm_machine()
 {
@@ -250,6 +255,7 @@ void stop_pwm_machine()
 	s_motor_pin1 = 1;
 	s_motor_pin2 = 1;
 	rtMotor.stop();	
+	bRunning = false;
 #elif USE_PWM_MACHINE_FOR_ZXP
 
 #endif
@@ -264,6 +270,7 @@ void start_pwm_machine()
 	s_motor_pin2 = 1;
 	nStep = 0;
 	rtMotorRun(NULL);
+	bRunning = true;
 #elif USE_PWM_MACHINE_FOR_ZXP
 
 #endif	
@@ -298,6 +305,7 @@ int YTMDMPlayerListener::on_start(int flags)
 			nStep = 0;
 			//rtMotorRun(NULL);
 			rtMotorRun(&flags);
+			bRunning = true;
 		}
 	#endif	
 	}
@@ -321,6 +329,7 @@ int YTMDMPlayerListener::on_start(int flags)
 			nStep = 0;
 			//rtMotorRun(NULL);
 			rtMotorRun(&flags);
+			bRunning = true;
 		}
 	#endif	
 	}
@@ -353,6 +362,7 @@ int YTMDMPlayerListener::on_stop(int flags)
 		s_motor_pin1 = 1;
 		s_motor_pin2 = 1;
 		rtMotor.stop();
+		bRunning = false;
 	}
 #endif
 
@@ -391,6 +401,7 @@ int YTMDMPlayerListener::on_finish(int flags)
 		s_motor_pin1 = 1;
 		s_motor_pin2 = 1;
 		rtMotor.stop();
+		bRunning = false;
 	}
 #endif
 

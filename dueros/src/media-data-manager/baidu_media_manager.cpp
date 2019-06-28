@@ -18,7 +18,7 @@ namespace duer {
 
 MediaManager MediaManager::_s_instance;
 bool MediaManager::_s_initialized = false;
-static const int UNIT_VOLUME = (duer::MAX_VOLUME - duer::MIN_VOLUME) / 3;
+
 static unsigned char VOLUME = duer::DEFAULT_VOLUME;
 
 MediaManager::MediaManager() {
@@ -227,7 +227,7 @@ void MediaManager::voice_up_repeat()
 {
 	unsigned char s_volume = get_volume();
 
-	DUER_LOGI("s_volume %d",s_volume);
+	DUER_LOGI("s_volume0: %d",s_volume);
 	
 	if(s_volume < duer::MAX_VOLUME)
 		voice_up();
@@ -238,29 +238,22 @@ void MediaManager::voice_up_repeat()
 void MediaManager::voice_up()
 {
 	unsigned char s_volume = get_volume();
-	DUER_LOGI("s_volume %d",s_volume);
+	
 #if 1
     if (s_volume < duer::MAX_VOLUME) {
-        s_volume = s_volume + UNIT_VOLUME > duer::MAX_VOLUME ?
-                   duer::MAX_VOLUME : s_volume + UNIT_VOLUME;
+        s_volume = s_volume + duer::UNIT_VOLUME > duer::MAX_VOLUME ?
+                   duer::MAX_VOLUME : s_volume + duer::UNIT_VOLUME;
         set_volume(s_volume);
     }
 #else
-	
-
 	if (s_volume >= duer::MIN_VOLUME && s_volume <= duer::DEFAULT_VOLUME ) 
 	{
 		s_volume = s_volume + UNIT_VOLUME > duer::MAX_VOLUME ?
 				   duer::MAX_VOLUME : s_volume + UNIT_VOLUME;
 		set_volume(s_volume);
 	}
-
-
-
-#endif
-
-
-	
+#endif	
+	DUER_LOGI("s_volume1: %d",s_volume);
 }
 
 
@@ -270,12 +263,13 @@ void MediaManager::voice_up()
 void MediaManager::voice_down()
 {
 	unsigned char s_volume = get_volume();
-	DUER_LOGI("s_volume %d",s_volume);
+	
     if (s_volume > duer::MIN_VOLUME) {
-        s_volume = s_volume - UNIT_VOLUME < duer::MIN_VOLUME ?
-                   duer::MIN_VOLUME : s_volume - UNIT_VOLUME;
+        s_volume = s_volume - duer::UNIT_VOLUME < duer::MIN_VOLUME ?
+                   duer::MIN_VOLUME : s_volume - duer::UNIT_VOLUME;
         set_volume(s_volume);
     }
+	DUER_LOGI("s_volume1: %d",s_volume);
 }
 
 MediaPlayerStatus MediaManager::bt_mode() {

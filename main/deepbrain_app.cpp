@@ -93,6 +93,7 @@ extern void stop_pwm_machine();
 extern void start_pwm_machine();
 extern bool get_status();
 extern void set_status(bool _enable);
+extern bool get_run_status();
 }
 
 
@@ -1149,7 +1150,6 @@ void play_next()
 	duer::YTMediaManager::instance().play_local(path,duer::MEDIA_FLAG_LOCAL | duer::MEDIA_FLAG_LOCAL_MODE);
 #else	/// spi flash mode
 	spi_local_init();
-
 	DEBUG_LOGI(LOG_TAG, "play_next");
 	unsigned int  addr = 0x00000000;	
 	int len = 0;	
@@ -1163,7 +1163,7 @@ void play_next()
 void set_action()
 {	
 
-#if 1
+#if 0
 	bool bEnable = duer::get_status();
 	bool bIsPlaying = duer::YTMediaManager::instance().is_playing();
 	
@@ -1171,6 +1171,10 @@ void set_action()
 	{
 		duer::set_status(!bEnable);
 		DEBUG_LOGI(LOG_TAG, "set action enable");
+	#if 1
+		if(dcl_mode == DEEPBRAIN_MODE_BT)duer::start_pwm_machine();
+		else
+	#endif	
 		if(bIsPlaying)duer::start_pwm_machine();	
 	}
 	else
@@ -1180,7 +1184,39 @@ void set_action()
 		duer::set_status(!bEnable);
 	}
 #else
-	duer::YTMediaManager::instance().play_data(YT_DOG,sizeof(YT_DOG)/sizeof(YT_DOG[0]),duer::MEDIA_FLAG_DOG_DATA);
+	bool bEnable = duer::get_status();
+	bool bIsPlaying = duer::YTMediaManager::instance().is_playing();
+	bool bRunning = duer::get_run_status();
+	if(dcl_mode == DEEPBRAIN_MODE_BT)
+	{
+		if(!bRunning)
+		{
+			duer::set_status(true);
+			DEBUG_LOGI(LOG_TAG, "bt set action enable");
+			duer::start_pwm_machine();
+		}
+		else
+		{
+			duer::stop_pwm_machine();
+			DEBUG_LOGI(LOG_TAG, "bt set action disenable");
+			duer::set_status(false);
+		}
+	}
+	else
+	{
+		if(!bEnable)
+		{
+			duer::set_status(!bEnable);
+			DEBUG_LOGI(LOG_TAG, "set action enable");
+			if(bIsPlaying)duer::start_pwm_machine();	
+		}
+		else
+		{
+			DEBUG_LOGI(LOG_TAG, "set action disenable");
+			duer::stop_pwm_machine();
+			duer::set_status(!bEnable);
+		}
+	}	
 #endif
 }
 
@@ -1223,6 +1259,11 @@ void entry_bt()
 		}		
 	}
 	entry_new_mode(dcl_mode);
+
+#if 0
+	duer::start_pwm_machine();
+#endif
+	
 }
 
 void exit_bt()
@@ -1231,6 +1272,10 @@ void exit_bt()
 	{
 		duer::MediaManager::instance().uart_mode();
 	}
+	
+#if 0
+	duer::stop_pwm_machine();
+#endif	
 }
 
 void entry_wifi()
@@ -1269,7 +1314,7 @@ void entry_magic()
 	duer::YTMediaManager::instance().stop();
 	duer::YTMediaManager::instance().stop_completely();
 	duer::YTMediaManager::instance().clear_queue();
-#if 0	
+#if 0	//// 5981a
 	airkiss_lan_discovery_delete();
 	asr_service_delete();
 	mpush_service_delete();  
@@ -1313,7 +1358,7 @@ void exit_magic()
 	magic_amrnb_data = NULL;
 	memory_info();
 	duer::duer_recorder_reinit();
-#if 0	
+#if 0	//// 5981a
 	airkiss_lan_discovery_create(TASK_PRIORITY_1);
 	asr_service_create(TASK_PRIORITY_1);
 	mpush_service_create(TASK_PRIORITY_1); 
@@ -1564,15 +1609,20 @@ void btn1_long_handle()
 void btn2_fall_handle()
 {
 	DEBUG_LOGI(LOG_TAG, "btn2_fall_handle");
-	if(dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL)
-	{
-		duer::event_trigger(duer::EVT_KEY_PLAY_NEXT);
-	}
 }
 
 void btn2_rise_handle()
 {
 	DEBUG_LOGI(LOG_TAG, "btn2_rise_handle");
+	if(dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL)
+	{
+		static bool bPause = false;
+		if(bPause)
+			duer::event_trigger(duer::EVT_KEY_PLAY_NEXT);
+		else
+			duer::YTMediaManager::instance().stop();
+		bPause = !bPause;
+	}	
 }
 
 void btn2_long_handle()
@@ -1591,7 +1641,7 @@ void btn3_fall_handle()
 void btn3_rise_handle()
 {
 	DEBUG_LOGI(LOG_TAG, "btn3_rise_handle");
-	if(dcl_mode == DEEPBRAIN_MODE_ASR || dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL || dcl_mode ==DEEPBRAIN_MODE_AIRKISS )
+	if(dcl_mode == DEEPBRAIN_MODE_ASR || dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL ||dcl_mode ==DEEPBRAIN_MODE_BT || dcl_mode ==DEEPBRAIN_MODE_AIRKISS )
 	{
 		duer::event_trigger(duer::EVT_KEY_VOLUME_PRESS);	
 	}	
@@ -1656,6 +1706,8 @@ void entry_new_mode(int new_mode,bool need_prompt)
 			s_button2.longpress(btn2_long_handle,2000,duer::YT_LONG_KEY_ONCE);
 			s_button3.fall(NULL);
 			s_button3.rise(NULL);
+			//add
+			s_button3.rise(&btn3_rise_handle);
 			s_button3.longpress(NULL,0,-1);
 			//add
 			s_button3.longpress(&btn3_long_handle, 2000, duer::YT_LONG_KEY_ONCE);

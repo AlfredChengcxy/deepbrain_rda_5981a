@@ -143,7 +143,8 @@ int main()
     duer::MediaManager::instance().initialize();
 	duer::YTMediaManager::instance().init();
 
-    duer::YTMediaManager::instance().set_volume(/*duer::DEFAULT_VOLUME*/10);	
+    //duer::YTMediaManager::instance().set_volume(duer::DEFAULT_VOLUME);	
+	duer::YTMediaManager::instance().set_volume(duer::MIN_VOLUME);
 
 #if 0//chenjl add 20190317
 	if(vbat_check_startup())
@@ -203,7 +204,7 @@ int main()
 	mpush_service_create(TASK_PRIORITY_1);
 
 	//17.OTA service
-	//ota_service_create(TASK_PRIORITY_2);
+	ota_service_create(TASK_PRIORITY_2);
 
 	//20.memo è®¾ç½®
 	//memo_service_create(TASK_PRIORITY_1);
