@@ -251,7 +251,7 @@ void stop_pwm_machine()
 {
 #if USE_PWM_MACHINE_FOR_KMT
 	//return ;
-	if(!bEnable)return;
+	//if(!bEnable)return;
 	s_motor_pin1 = 1;
 	s_motor_pin2 = 1;
 	rtMotor.stop();	
@@ -265,7 +265,7 @@ void start_pwm_machine()
 {
 #if USE_PWM_MACHINE_FOR_KMT
 	//return ;
-	if(!bEnable)return;
+	//if(!bEnable)return;
 	s_motor_pin1 = 1;
 	s_motor_pin2 = 1;
 	nStep = 0;
@@ -286,7 +286,7 @@ int YTMDMPlayerListener::on_start(int flags)
 #if USE_PWM_MACHINE_FOR_ZXP
 	gflags = flags;
 #endif	
-	if (flags & MEDIA_FLAG_DCS_URL || flags &MEDIA_FLAG_SPI_DATA || flags & MEDIA_FLAG_DOG_DATA) 
+	if (flags & MEDIA_FLAG_DCS_URL /*|| flags &MEDIA_FLAG_SPI_DATA*/ || flags & MEDIA_FLAG_DOG_DATA) 
 	{	
 	#if USE_PWM_MACHINE_FOR_ZXP
 		gPwm = 0.00f;//0.3	  
@@ -298,15 +298,16 @@ int YTMDMPlayerListener::on_start(int flags)
 	#endif
 	
 	#if USE_PWM_MACHINE_FOR_KMT
-		if(bEnable)
-		{
+		//if(bEnable)
+		//{
 			s_motor_pin1 = 1;
 			s_motor_pin2 = 1;
 			nStep = 0;
 			//rtMotorRun(NULL);
+			rtMotor.stop();
 			rtMotorRun(&flags);
 			bRunning = true;
-		}
+		//}
 	#endif	
 	}
 
@@ -321,7 +322,7 @@ int YTMDMPlayerListener::on_start(int flags)
 		rtPwm.start(800);
 	#endif
 	
-	#if USE_PWM_MACHINE_FOR_KMT
+	#if 0//USE_PWM_MACHINE_FOR_KMT // kmt Ä§Òô²»¶¯
 		if(bEnable)
 		{
 			s_motor_pin1 = 1;
@@ -357,12 +358,15 @@ int YTMDMPlayerListener::on_stop(int flags)
 #endif
 
 #if USE_PWM_MACHINE_FOR_KMT
-	if(bEnable)
+	if(flags & MEDIA_FLAG_DCS_URL /*|| flags &MEDIA_FLAG_SPI_DATA*/ || flags & MEDIA_FLAG_DOG_DATA)
 	{
-		s_motor_pin1 = 1;
-		s_motor_pin2 = 1;
-		rtMotor.stop();
-		bRunning = false;
+		//if(bEnable)
+		//{
+			s_motor_pin1 = 1;
+			s_motor_pin2 = 1;
+			rtMotor.stop();
+			bRunning = false;
+		//}
 	}
 #endif
 
@@ -396,12 +400,15 @@ int YTMDMPlayerListener::on_finish(int flags)
 #endif
 
 #if USE_PWM_MACHINE_FOR_KMT
-	if(bEnable)
+	if(flags & MEDIA_FLAG_DCS_URL /*|| flags &MEDIA_FLAG_SPI_DATA*/ || flags & MEDIA_FLAG_DOG_DATA)
 	{
-		s_motor_pin1 = 1;
-		s_motor_pin2 = 1;
-		rtMotor.stop();
-		bRunning = false;
+		//if(bEnable)
+		//{
+			s_motor_pin1 = 1;
+			s_motor_pin2 = 1;
+			rtMotor.stop();
+			bRunning = false;
+		//}
 	}
 #endif
 

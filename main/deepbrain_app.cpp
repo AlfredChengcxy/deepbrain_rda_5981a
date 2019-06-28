@@ -1187,20 +1187,23 @@ void set_action()
 	bool bEnable = duer::get_status();
 	bool bIsPlaying = duer::YTMediaManager::instance().is_playing();
 	bool bRunning = duer::get_run_status();
-	if(dcl_mode == DEEPBRAIN_MODE_BT)
+	
+	if(/*dcl_mode == DEEPBRAIN_MODE_BT*/1)//// all mode
 	{
+	
 		if(!bRunning)
 		{
 			duer::set_status(true);
-			DEBUG_LOGI(LOG_TAG, "bt set action enable");
+			DEBUG_LOGI(LOG_TAG, "set action enable");
 			duer::start_pwm_machine();
 		}
 		else
 		{
 			duer::stop_pwm_machine();
-			DEBUG_LOGI(LOG_TAG, "bt set action disenable");
+			DEBUG_LOGI(LOG_TAG, "set action disenable");
 			duer::set_status(false);
 		}
+		
 	}
 	else
 	{
@@ -1216,7 +1219,7 @@ void set_action()
 			duer::stop_pwm_machine();
 			duer::set_status(!bEnable);
 		}
-	}	
+	}
 #endif
 }
 

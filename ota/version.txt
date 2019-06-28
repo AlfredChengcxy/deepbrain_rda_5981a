@@ -1,0 +1,1 @@
+{"version":"V1.0.0build20181129","download_url":"http://211.152.53.233/RDA_Yiyu_OTA_Bin/main_ota_1001_upgrade.bin"}

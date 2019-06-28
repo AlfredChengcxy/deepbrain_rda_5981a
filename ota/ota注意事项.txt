@@ -1,0 +1,10 @@
+/*
+后续更新
+修改 Userconfig.h 中的 ESP32_FW_VERSION 
+修改 version.txt  中的 version 并保持俩个version 相同
+修改ota3_ota_12.bat中的版本号
+在将生成的main_ota_1001_upgrade.bin和新的version.txt在服务器上更新下
+
+初次烧录
+值得注意的是 初次烧入带boolloader的bin 的version 与ota服务器上的version不能相同
+*/
