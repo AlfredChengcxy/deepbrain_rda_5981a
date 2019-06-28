@@ -298,8 +298,8 @@ int YTMDMPlayerListener::on_start(int flags)
 	#endif
 	
 	#if USE_PWM_MACHINE_FOR_KMT
-		//if(bEnable)
-		//{
+		if(bEnable)
+		{
 			s_motor_pin1 = 1;
 			s_motor_pin2 = 1;
 			nStep = 0;
@@ -307,7 +307,7 @@ int YTMDMPlayerListener::on_start(int flags)
 			rtMotor.stop();
 			rtMotorRun(&flags);
 			bRunning = true;
-		//}
+		}
 	#endif	
 	}
 
@@ -360,13 +360,13 @@ int YTMDMPlayerListener::on_stop(int flags)
 #if USE_PWM_MACHINE_FOR_KMT
 	if(flags & MEDIA_FLAG_DCS_URL /*|| flags &MEDIA_FLAG_SPI_DATA*/ || flags & MEDIA_FLAG_DOG_DATA)
 	{
-		//if(bEnable)
-		//{
+		if(bEnable)
+		{
 			s_motor_pin1 = 1;
 			s_motor_pin2 = 1;
 			rtMotor.stop();
 			bRunning = false;
-		//}
+		}
 	}
 #endif
 
@@ -402,13 +402,13 @@ int YTMDMPlayerListener::on_finish(int flags)
 #if USE_PWM_MACHINE_FOR_KMT
 	if(flags & MEDIA_FLAG_DCS_URL /*|| flags &MEDIA_FLAG_SPI_DATA*/ || flags & MEDIA_FLAG_DOG_DATA)
 	{
-		//if(bEnable)
-		//{
+		if(bEnable)
+		{
 			s_motor_pin1 = 1;
 			s_motor_pin2 = 1;
 			rtMotor.stop();
 			bRunning = false;
-		//}
+		}
 	}
 #endif
 
