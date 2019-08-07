@@ -9,7 +9,7 @@
 #include "device_params_manage.h"
 
 #define DCL_DEMO_ENV					0	//DEMOç¯å¢ƒ
-#define DCL_PRE_ENV						0	//é¢„å‘å¸ƒç¯å¢ƒ
+#define DCL_PRE_ENV						0	
 #define DCL_YT_ENV						0	//youngtone
 #define DCL_SF_ENV						0	//sf
 #define DCL_KMT_ENV						1	//sf
@@ -41,7 +41,8 @@
 ÖµµÃ×¢ÒâµÄÊÇ ³õ´ÎÉÕÈë´øboolloaderµÄbin µÄversion Óëota·şÎñÆ÷ÉÏµÄversion²»ÄÜÏàÍ¬
 */
 
-#define ESP32_FW_VERSION	"V1.0.8build20190628"
+#define ESP32_FW_VERSION	"V1.0.1build20190730"
+//#define ESP32_FW_VERSION	"V1.0.8build20190510"
 
 //demoç¯å¢ƒ
 #if DCL_DEMO_ENV == 1
@@ -55,8 +56,11 @@
 #endif
 
 #if DCL_YT_ENV == 1
+//#define DEEP_BRAIN_APP_ID 	"A000000000000438"
+//#define DEEP_BRAIN_ROBOT_ID "0c7a9d8f-1d28-11e9-8148-801844e30cac"
 #define DEEP_BRAIN_APP_ID 	"A000000000000438"
-#define DEEP_BRAIN_ROBOT_ID "0c7a9d8f-1d28-11e9-8148-801844e30cac"
+#define DEEP_BRAIN_ROBOT_ID "352f6362-a6a3-11e9-8148-801844e30cac"
+
 #endif
 
 #if DCL_SF_ENV == 1
@@ -75,10 +79,10 @@
 //#define OTA_UPDATE_SERVER_URL		"http://file.yuyiyun.com:2088/ota/PJ-20180830-0002-aixiaobei/version.txt"
 //#define OTA_UPDATE_SERVER_URL		"http://192.168.1.153/firmware/version.txt"
 #if DCL_SF_ENV == 1
-#define OTA_UPDATE_SERVER_URL		"http://file.yuyiyun.com:2088/ota/PJ-20190222-0001-zhuxiaopi/version.txt"
+#define OTA_UPDATE_SERVER_URL		"http://file.yuyiyun.com:2088/ota/PJ-20190222-0001-zhuxiaopi/a/version.txt"
 #endif
 
-#if DCL_KMT_ENV == 1
+#if DCL_KMT_ENV == 1 || DCL_YT_ENV == 1
 #define OTA_UPDATE_SERVER_URL		"http://211.152.53.233/RDA_Yiyu_OTA_Bin/version.txt"
 #endif
 
@@ -95,7 +99,7 @@
 
 
 /******************************************************************
-//ä»»åŠ¡ä¼˜å…ˆçº§å®šä¹‰,æ•°å­—è¶Šå¤§ï¼Œä¼˜å…ˆçº§è¶Šé«˜
+//
 *******************************************************************/
 #define TASK_PRIORITY_1	0
 #define TASK_PRIORITY_2	1

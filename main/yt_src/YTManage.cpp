@@ -201,8 +201,8 @@ void rtMotorRun(void const *argument)
 			s_motor_pin1 = 1;
 			s_motor_pin2 = 1;
 			_delay = 400;
-
-			if(flag == MEDIA_FLAG_DOG_DATA)
+			
+			if(flag == MEDIA_FLAG_DOG_DATA_NPG)
 				nStep = 1;
 			else
 				nStep = 2;
@@ -219,7 +219,12 @@ void rtMotorRun(void const *argument)
 			s_motor_pin1 = 1;
 			s_motor_pin2 = 1;
 			_delay = 400;
-			nStep = 0;
+			
+			if(flag == MEDIA_FLAG_DOG_DATA_XQZ || flag == MEDIA_FLAG_DOG_DATA_MGM)
+				nStep = 3;
+			else
+				nStep = 0;	
+
 			break;
 	}
 
@@ -286,7 +291,7 @@ int YTMDMPlayerListener::on_start(int flags)
 #if USE_PWM_MACHINE_FOR_ZXP
 	gflags = flags;
 #endif	
-	if (flags & MEDIA_FLAG_DCS_URL /*|| flags &MEDIA_FLAG_SPI_DATA*/ || flags & MEDIA_FLAG_DOG_DATA) 
+	if (flags & MEDIA_FLAG_DCS_URL /*|| flags &MEDIA_FLAG_SPI_DATA*/ || flags & MEDIA_FLAG_DOG_DATA_MGM || flags & MEDIA_FLAG_DOG_DATA_NPG || flags & MEDIA_FLAG_DOG_DATA_XQZ) 
 	{	
 	#if USE_PWM_MACHINE_FOR_ZXP
 		gPwm = 0.00f;//0.3	  
@@ -303,6 +308,7 @@ int YTMDMPlayerListener::on_start(int flags)
 			s_motor_pin1 = 1;
 			s_motor_pin2 = 1;
 			nStep = 0;
+			if(flags & MEDIA_FLAG_DOG_DATA_XQZ)nStep = 2;
 			//rtMotorRun(NULL);
 			rtMotor.stop();
 			rtMotorRun(&flags);
@@ -358,7 +364,7 @@ int YTMDMPlayerListener::on_stop(int flags)
 #endif
 
 #if USE_PWM_MACHINE_FOR_KMT
-	if(flags & MEDIA_FLAG_DCS_URL /*|| flags &MEDIA_FLAG_SPI_DATA*/ || flags & MEDIA_FLAG_DOG_DATA)
+	if(flags & MEDIA_FLAG_DCS_URL /*|| flags &MEDIA_FLAG_SPI_DATA*/ || flags & MEDIA_FLAG_DOG_DATA_MGM || flags & MEDIA_FLAG_DOG_DATA_NPG || flags & MEDIA_FLAG_DOG_DATA_XQZ)
 	{
 		if(bEnable)
 		{
@@ -400,7 +406,7 @@ int YTMDMPlayerListener::on_finish(int flags)
 #endif
 
 #if USE_PWM_MACHINE_FOR_KMT
-	if(flags & MEDIA_FLAG_DCS_URL /*|| flags &MEDIA_FLAG_SPI_DATA*/ || flags & MEDIA_FLAG_DOG_DATA)
+	if(flags & MEDIA_FLAG_DCS_URL /*|| flags &MEDIA_FLAG_SPI_DATA*/ || flags & MEDIA_FLAG_DOG_DATA_MGM || flags & MEDIA_FLAG_DOG_DATA_NPG || flags & MEDIA_FLAG_DOG_DATA_XQZ)
 	{
 		if(bEnable)
 		{

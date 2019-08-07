@@ -222,11 +222,22 @@ void crypto_generate_private_key(
 	char 			strBuf[256] = {0};
 	unsigned char 	digest[20] 	= {0};
 
-	snprintf(strBuf, sizeof(strBuf), "%s%s%s", strNonce, strTimeStamp, strRobotID); 
+	snprintf(strBuf, sizeof(strBuf), "%s%s%s", strNonce, strTimeStamp, strRobotID);
+
+	//printf("strBuf1:\r\n%s\r\n",strBuf);
+	
 	crypto_sha1((unsigned char*)strBuf, strlen(strBuf), (unsigned char*)&digest); 
-
+#if 0
+	printf("strBuf2:\r\n%s\r\n",strBuf);
+	for(int i = 0;i<20;i++)
+	{
+		printf("0x%x,",digest[i]);
+	}
+	printf("\r\n");
+#endif	
 	crypto_base64_encode(strPrivateKey, iStrLen, &len, digest, sizeof(digest));
-
+//	printf("strPrivateKey:\r\n%s\r\n",strPrivateKey);
+	
 	return;
 }
 

@@ -163,6 +163,7 @@ bool get_flash_cfg(FLASH_CONFIG_PARAMS_T _params, void *_value)
 		}
 		case FLASH_CFG_DEVICE_ID:
 		{
+			
 			snprintf((char*)_value, sizeof(g_device_params->basic_info.device_sn), 
 				"%s", g_device_params->basic_info.device_sn);
 			break;

@@ -172,6 +172,9 @@ static DCL_ERROR_CODE_t dcl_asr_write_packet(
 
 	memcpy(http_buffer->http_request + http_buffer->http_request_len, data, size);
 	http_buffer->http_request_len += size;
+
+
+	printf("http_request:\r\n%s\r\n",http_buffer->http_request);
 		
 	return DCL_ERROR_CODE_OK;
 }

@@ -15,7 +15,7 @@
 
 namespace duer {
 
-#define USE_DYNAMIC_THREAD 1
+#define USE_DYNAMIC_THREAD 0
 
 #if !USE_DYNAMIC_THREAD
 static rtos::Thread duer_rec_thread(osPriorityAboveNormal, DEFAULT_STACK_SIZE);

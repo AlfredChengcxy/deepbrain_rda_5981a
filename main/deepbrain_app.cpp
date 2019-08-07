@@ -47,6 +47,7 @@
 
 #define ZXP_PCBA 0
 #define HB_PCBA 0
+#define BDW_PCBA 0
 #define KMT_PCBA 1
 
 #if ZXP_PCBA
@@ -65,6 +66,10 @@ static duer::YTGpadcKey s_button4(/*KEY_B5*/KEY_B0);// long (wechat)			short (pl
 static duer::YTGpadcKey s_button3(/*KEY_B4*/KEY_B2);// long (action) 		short (volume ctl)    			3ºÅ¼ü
 static duer::YTGpadcKey s_button2(/*KEY_B3*/KEY_B1);// long (model)			short (next/pause)				2ºÅ¼ü
 static duer::YTGpadcKey s_button1(/*KEY_B0*/KEY_B3);// long (awake)			short (net)					1ºÅ¼ü
+#elif BDW_PCBA
+static duer::YTGpadcKey s_wchat_button(KEY_B1);// Î¢ÁÄ
+static duer::YTGpadcKey s_magic_button(KEY_B0);// Ä§Òô + ´ò¶Ï»½ÐÑ
+static duer::YTGpadcKey s_play_pause_button(KEY_B2); // ²¥·ÅÔÝÍ£+ÅäÍø
 #endif
 
 
@@ -195,6 +200,8 @@ void yt_dcl_process_result(ASR_RESULT_t *asr_result)
 
 	memset(nlp_result, 0x00, sizeof(NLP_RESULT_T));
 
+	printf("str_result:\r\n%s\r\n",asr_result->str_result);
+
 	if (dcl_nlp_result_decode(asr_result->str_result, nlp_result) != NLP_DECODE_ERRNO_OK)
 	{
 		//to do something
@@ -220,20 +227,34 @@ void yt_dcl_process_result(ASR_RESULT_t *asr_result)
 
 		#if KMT_PCBA
 			char p_maigemeng[9]={0xE5,0x8D,0x96,0xE4,0xB8,0xAA,0xE8,0x90,0x8C};
+			char p_xiangqianzou[9]={0xE5,0x90,0x91,0xE5,0x89,0x8D,0xE8,0xB5,0xB0};
+			char p_niupigu[9]={0xE6,0x89,0xAD,0xE5,0xB1,0x81,0xE8,0x82,0xA1};	
 			char p_tiaogewu[9]= {0xE8,0xB7,0xB3,0xE4,0xB8,0xAA,0xE8,0x88,0x9E};
 			char p_changshouge[9]={0xE5,0x94,0xB1,0xE9,0xA6,0x96,0xE6,0xAD,0x8C};
 			if (memcmp(nlp_result->input_text, p_maigemeng,9) == 0)
 			{
-				duer::YTMediaManager::instance().play_data(YT_DOG,sizeof(YT_DOG)/sizeof(YT_DOG[0]),duer::MEDIA_FLAG_DOG_DATA);
+				duer::YTMediaManager::instance().play_data(YT_DOG,sizeof(YT_DOG)/sizeof(YT_DOG[0]),duer::MEDIA_FLAG_DOG_DATA_MGM);
 				break;
-			}	
+			}
+			else if(memcmp(nlp_result->input_text, p_xiangqianzou,9) == 0)
+			{
+				duer::YTMediaManager::instance().play_data(YT_DOG,sizeof(YT_DOG)/sizeof(YT_DOG[0]),duer::MEDIA_FLAG_DOG_DATA_XQZ);
+				break;
+			}
+			else if(memcmp(nlp_result->input_text, p_niupigu,9) == 0)
+			{
+				duer::YTMediaManager::instance().play_data(YT_DOG,sizeof(YT_DOG)/sizeof(YT_DOG[0]),duer::MEDIA_FLAG_DOG_DATA_NPG);
+				break;
+			}			
 			else if(memcmp(nlp_result->input_text, p_tiaogewu,9) == 0)
 			{
 				spi_local_init();
 				unsigned int  addr = 0x00000000;	
 				int len = 0;	
 				spi_local_getrandom(&addr,&len);	
-				duer::YTMediaManager::instance().play_data((const char *)&addr,len,duer::MEDIA_FLAG_LOCAL | duer::MEDIA_FLAG_LOCAL_MODE | duer::MEDIA_FLAG_SPI_DATA | duer::MEDIA_FLAG_SPI_DATA_NO_CON);
+				duer::YTMediaManager::instance().play_data((const char *)&addr,len,duer::MEDIA_FLAG_LOCAL | duer::MEDIA_FLAG_LOCAL_MODE |
+																				duer::MEDIA_FLAG_SPI_DATA | duer::MEDIA_FLAG_SPI_DATA_NO_CON
+																				|duer::MEDIA_FLAG_DOG_DATA_MGM);
 				break;
 				//DEBUG_LOGE(LOG_TAG, "nlp_result->input_text : %s",nlp_result->input_text);
 				//memset(nlp_result->input_text,0,sizeof(nlp_result->input_text));
@@ -987,7 +1008,9 @@ void play_pause()
 	duer::YTMediaManager::instance().pause_or_resume();
 }
 
-#if ZXP_PCBA
+
+
+#if ZXP_PCBA || BDW_PCBA
 void talk_button_fall_handle()
 {
     duer::event_trigger(duer::EVT_KEY_REC_PRESS);
@@ -1042,6 +1065,13 @@ void wifi_button_longpress_handle()
 {
 	duer::event_trigger(duer::EVT_RESET_WIFI);
 }
+
+void play_pause_fall_handle()
+{
+	duer::event_trigger(duer::EVT_KEY_PAUSE);
+}
+
+
 #elif HB_PCBA
 
 void talk_button_fall_handle()
@@ -1745,7 +1775,7 @@ void entry_new_mode(int new_mode,bool need_prompt)
 			//s_button1.fall(&btn1_fall_handle);
 			//s_button1.rise(&btn1_rise_handle);
 			s_button1.rise(&btn1_fall_handle);
-			s_button1.longpress(&btn1_long_handle, 2000, duer::YT_LONG_KEY_ONCE);
+			s_button1.longpress(&btn1_long_handle, 5000, duer::YT_LONG_KEY_ONCE);
 			s_button2.fall(&btn2_fall_handle);
 			s_button2.rise(&btn2_rise_handle);
 			s_button2.longpress(&btn2_long_handle, 2000, duer::YT_LONG_KEY_ONCE);			
@@ -1871,6 +1901,13 @@ void yt_dcl_start()
 	duer::event_set_handler(duer::EVT_KEY_MCHAT_PRESS, &mchat_start);
 	duer::event_set_handler(duer::EVT_KEY_MCHAT_RELEASE, &mchat_stop);
 	duer::event_set_handler(duer::EVT_KEY_MCHAT_PLAY, &mchat_play);
+#elif BDW_PCBA
+	duer::event_set_handler(duer::EVT_KEY_REC_PRESS, &talk_start);
+	duer::event_set_handler(duer::EVT_KEY_REC_RELEASE, &talk_stop);	
+	duer::event_set_handler(duer::EVT_KEY_PAUSE, &play_pause);	
+	duer::event_set_handler(duer::EVT_KEY_MCHAT_PRESS, &mchat_start);
+	duer::event_set_handler(duer::EVT_KEY_MCHAT_RELEASE, &mchat_stop);
+	duer::event_set_handler(duer::EVT_KEY_MCHAT_PLAY, &mchat_play);	
 #endif	
 	duer::event_set_handler(duer::EVT_RESET_WIFI, &reset_wifi);
 }
@@ -1903,6 +1940,12 @@ void yt_dcl_stop()
 	duer::event_set_handler(duer::EVT_KEY_MCHAT_PRESS, NULL);
 	duer::event_set_handler(duer::EVT_KEY_MCHAT_RELEASE, NULL);
 	duer::event_set_handler(duer::EVT_KEY_MCHAT_PLAY, NULL);
+#elif BDW_PCBA
+	duer::event_set_handler(duer::EVT_KEY_REC_PRESS, NULL);
+	duer::event_set_handler(duer::EVT_KEY_REC_RELEASE, NULL);
+	duer::event_set_handler(duer::EVT_KEY_MCHAT_PRESS, NULL);
+	duer::event_set_handler(duer::EVT_KEY_MCHAT_RELEASE, NULL);
+	duer::event_set_handler(duer::EVT_KEY_PAUSE, NULL);	
 #endif
 	duer::event_set_handler(duer::EVT_RESET_WIFI, NULL);
 }
@@ -1961,28 +2004,19 @@ void yt_dcl_init()
 	duer::event_set_handler(duer::EVT_KEY_PLAY_NEXT, &play_next);
 	duer::event_set_handler(duer::EVT_KEY_ENABLE_ACTION,&set_action);
 	duer::event_set_handler(duer::EVT_KEY_VOLUME_PRESS, &change_volume);
-	
 	duer::yt_key_init();
-
-#if 0	
-// wechat	
-	s_button4.fall(&btn4_fall_handle);
-	s_button4.rise(&btn4_rise_handle);
-	s_button4.longpress(&btn4_long_handle, 2000, duer::YT_LONG_KEY_WITH_RISE);
-// action	
-	s_button3.fall(&btn3_fall_handle); 
-	s_button3.rise(&btn3_rise_handle);
-	s_button3.longpress(&btn3_long_handle, 2000, duer::YT_LONG_KEY_ONCE);
-// model
-	s_button2.fall(&btn2_fall_handle);
-	s_button2.rise(&btn2_rise_handle);
-	s_button2.longpress(&btn2_long_handle, 2000, duer::YT_LONG_KEY_ONCE);
-// awake	
-	s_button1.fall(&btn1_fall_handle);
-	s_button1.rise(&btn1_rise_handle);
-	s_button1.longpress(&btn1_long_handle, 2000, duer::YT_LONG_KEY_ONCE);	
-#endif
-
+#elif BDW_PCBA
+	duer::event_set_handler(duer::EVT_KEY_START_RECORD, &start_recorder);
+	duer::event_set_handler(duer::EVT_KEY_STOP_RECORD, &stop_recorder);
+	duer::event_set_handler(duer::EVT_KEY_MAGIC_VOICE_PRESS, &magic_voice_start);
+    duer::event_set_handler(duer::EVT_RESET_WIFI, &reset_wifi);	
+	duer::event_set_handler(duer::EVT_KEY_PAUSE, &play_pause);
+	duer::yt_key_init();
+    s_wchat_button.rise(&mchat_button_rise_handle);
+    s_wchat_button.longpress(&mchat_button_longpress_handle, 1000, duer::YT_LONG_KEY_WITH_RISE);
+	s_magic_button.rise(&talk_button_fall_handle);
+	s_play_pause_button.rise(&play_pause_fall_handle);
+	s_play_pause_button.longpress(&wifi_button_longpress_handle, 5000, duer::YT_LONG_KEY_ONCE);
 #endif
 }
 
@@ -2031,6 +2065,10 @@ void auto_test_start()
 	s_button4.fall(&auto_test_key4);
 	s_button2.fall(&auto_test_key2);
 	s_button1.fall(&auto_test_key1);
+#elif BDW_PCBA
+	s_magic_button.fall(&auto_test_key);
+	s_wchat_button.fall(&auto_test_key1);
+	s_play_pause_button.fall(&auto_test_key2);
 #endif
 	yt_auto_test_start();
 }

@@ -32,10 +32,10 @@ typedef struct WIFI_MANAGE_HANDLE_t
 	
 	WiFiStackInterface *wifi_handler;
 
-	//wifi 消息队列，用于接收wifi断网等消息
+
 	void *wifi_msg_queue;
 	
-	//资源互斥锁
+
 	void *mutex_lock;
 }WIFI_MANAGE_HANDLE_t;
 
@@ -522,6 +522,8 @@ static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
 			
 			//连接wifi
 			duer::YTMediaManager::instance().play_data(YT_DB_WIFI_CONNECTING_TONE, sizeof(YT_DB_WIFI_CONNECTING_TONE), duer::MEDIA_FLAG_PROMPT_TONE);	
+			task_thread_sleep(1000);
+			
             if (wifi_connect(&handle->curr_wifi))
             {	        
             	handle->connecting_start_time = get_time_of_day();

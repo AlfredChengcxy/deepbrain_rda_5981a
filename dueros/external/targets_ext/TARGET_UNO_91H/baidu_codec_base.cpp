@@ -20,8 +20,8 @@
 #define RESET_PIN   PC_6
 #endif
 
-rda58xx _rda58xx(PB_2, PB_1, PC_9);
-//rda58xx _rda58xx(PD_3, PD_2, PC_9);///// 开发板
+rda58xx _rda58xx(PB_2, PB_1, PC_9);/// zhuxiaopi
+//rda58xx _rda58xx(PD_3, PD_2, PC_9);///// 开发板 (不到朱)
 
 namespace duer {
 
@@ -189,17 +189,14 @@ int BaiduCodecBase::on_start_play(MediaType type, int bitrate) {
         Thread::wait(100);
     }
 
-////////add for hailingke
-	_rda58xx.setGPIOMode(4);		
-	_rda58xx.setGPIODir(4);
-
-
     static bool is_first_time = true;
     if (is_first_time) {
         char version[64];
         if (_rda58xx.getChipVersion(version) == VACK) {
             is_first_time = false;
         }
+		_rda58xx.setGPIOMode(4); 
+		_rda58xx.setGPIODir(4);
     }
 
     rda58xx_at_status ret = _rda58xx.stopRecord();

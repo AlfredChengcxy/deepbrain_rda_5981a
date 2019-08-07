@@ -63,11 +63,19 @@
 #endif
 //#if SPI_GPIO_USED
 
+
+#if 1
 static mbed::DigitalOut SPI_MOSI(SPI_MOSI_PIN,0);
 static mbed::DigitalOut SPI_CLK(SPI_CLK_PIN,0);
 static mbed::DigitalOut SPI_CS(SPI_CS_PIN,1);
 static mbed::DigitalIn SPI_MISO(SPI_MISO_PIN);
+#else
+static mbed::DigitalOut SPI_MOSI(NC,0);
+static mbed::DigitalOut SPI_CLK(NC,0);
+static mbed::DigitalOut SPI_CS(NC,1);
+static mbed::DigitalIn SPI_MISO(NC);
 
+#endif
 
 //#endif
 

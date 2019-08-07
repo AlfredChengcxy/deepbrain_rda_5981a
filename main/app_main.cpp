@@ -119,6 +119,8 @@ void* get_network_interface(void)
 int main() 
 {
 	DEBUG_LOGI(LOG_TAG, "main");
+
+	
 #if defined(TARGET_UNO_91H)	
     rda5981_set_flash_size(RDA_FLASH_SIZE);
     rda5981_set_user_data_addr(RDA_SYS_DATA_ADDR, RDA_USER_DATA_ADDR, RDA_USER_DATA_LENG);
@@ -131,7 +133,6 @@ int main()
 		"RDA 5981 Wifi Model\r\n"
 		"====================================\r\n");
 
-
 /////// add nothing
 
 	//init global clock
@@ -143,8 +144,8 @@ int main()
     duer::MediaManager::instance().initialize();
 	duer::YTMediaManager::instance().init();
 
-    //duer::YTMediaManager::instance().set_volume(duer::DEFAULT_VOLUME);	
-	duer::YTMediaManager::instance().set_volume(duer::MIN_VOLUME);
+    duer::YTMediaManager::instance().set_volume(duer::DEFAULT_VOLUME);	
+	//duer::YTMediaManager::instance().set_volume(duer::MIN_VOLUME);
 
 #if 0//chenjl add 20190317
 	if(vbat_check_startup())
