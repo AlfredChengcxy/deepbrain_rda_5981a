@@ -729,11 +729,15 @@ static int mdm_send_magic_data_to_buffer(char* data, size_t size, int flags)
 #endif
 
 	//bExitMagicData = false;
+
+#if 0
 	bExitMagicDatav1 = false;
+#endif
+
     while(1) 
 	{
         if (mdm_check_need_to_stop()) {
-            DUER_LOGD("Stopped reading media file data by stop flag!");
+            DUER_LOGI("Stopped reading media file data by stop flag!");
             mdm_media_data_out_handler(&ctx, DUER_HTTP_DATA_LAST, NULL, 0, NULL);
             break;
         }
@@ -833,9 +837,15 @@ static int mdm_send_magic_data_to_buffer(char* data, size_t size, int flags)
     }
 
 	yt_voice_change_free();
-	//bExitMagicData = true;
-	bExitMagicDatav1 = true;
+
+
 	
+	//bExitMagicData = true;
+
+#if 0	
+	bExitMagicDatav1 = true;
+#endif
+
 #if 1
 	//duer::YTMediaManager::instance().set_volume(nPreVolume);	
 #endif

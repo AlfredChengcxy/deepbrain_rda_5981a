@@ -36,6 +36,7 @@ enum MediaFlag {
     MEDIA_FLAG_BT_TONE    			= 0x0200, // this flag indicate the media is interactive class
 	MEDIA_FLAG_URL_CHAT				= 0x0400, // URL_CHAT
 
+	 //MEDIA_FLAG_WCHAT_BEGIN         = 0x1000000,
 /// add for spi
 	MEDIA_FLAG_SPI_DATA				= 0x0800,
 

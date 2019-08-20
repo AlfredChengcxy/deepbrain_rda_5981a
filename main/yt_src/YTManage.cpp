@@ -25,6 +25,8 @@ extern void vbat_sleep();
 
 namespace deepbrain {
 extern bool is_magic_voice_mode();
+extern bool in_wechat_mode();
+extern bool in_wifi_mode();
 }
 namespace duer {
 //#define LOG(_fmt, ...)      printf("[DEVC] ==> %s(%d): "_fmt"\n", __FILE__, __LINE__, ##__VA_ARGS__)
@@ -291,7 +293,11 @@ int YTMDMPlayerListener::on_start(int flags)
 #if USE_PWM_MACHINE_FOR_ZXP
 	gflags = flags;
 #endif	
-	if (flags & MEDIA_FLAG_DCS_URL /*|| flags &MEDIA_FLAG_SPI_DATA*/ || flags & MEDIA_FLAG_DOG_DATA_MGM || flags & MEDIA_FLAG_DOG_DATA_NPG || flags & MEDIA_FLAG_DOG_DATA_XQZ) 
+	if (flags & MEDIA_FLAG_DCS_URL || flags &MEDIA_FLAG_SPI_DATA 
+		|| flags & MEDIA_FLAG_DOG_DATA_MGM || flags & MEDIA_FLAG_DOG_DATA_NPG || flags & MEDIA_FLAG_DOG_DATA_XQZ
+		//|| flags & MEDIA_FLAG_URL_CHAT|| flags & MEDIA_FLAG_SPEECH
+		||flags & MEDIA_FLAG_MAGIC_VOICE
+		) 
 	{	
 	#if USE_PWM_MACHINE_FOR_ZXP
 		gPwm = 0.00f;//0.3	  
@@ -315,6 +321,11 @@ int YTMDMPlayerListener::on_start(int flags)
 			bRunning = true;
 		}
 	#endif	
+	}
+
+	else if(1)
+	{
+		stop_pwm_machine();
 	}
 
 	
@@ -364,7 +375,11 @@ int YTMDMPlayerListener::on_stop(int flags)
 #endif
 
 #if USE_PWM_MACHINE_FOR_KMT
-	if(flags & MEDIA_FLAG_DCS_URL /*|| flags &MEDIA_FLAG_SPI_DATA*/ || flags & MEDIA_FLAG_DOG_DATA_MGM || flags & MEDIA_FLAG_DOG_DATA_NPG || flags & MEDIA_FLAG_DOG_DATA_XQZ)
+	if(flags & MEDIA_FLAG_DCS_URL || flags &MEDIA_FLAG_SPI_DATA 
+		|| flags & MEDIA_FLAG_DOG_DATA_MGM || flags & MEDIA_FLAG_DOG_DATA_NPG || flags & MEDIA_FLAG_DOG_DATA_XQZ
+		//|| flags & MEDIA_FLAG_URL_CHAT|| flags & MEDIA_FLAG_SPEECH
+		||flags & MEDIA_FLAG_MAGIC_VOICE
+		)
 	{
 		if(bEnable)
 		{
@@ -406,7 +421,11 @@ int YTMDMPlayerListener::on_finish(int flags)
 #endif
 
 #if USE_PWM_MACHINE_FOR_KMT
-	if(flags & MEDIA_FLAG_DCS_URL /*|| flags &MEDIA_FLAG_SPI_DATA*/ || flags & MEDIA_FLAG_DOG_DATA_MGM || flags & MEDIA_FLAG_DOG_DATA_NPG || flags & MEDIA_FLAG_DOG_DATA_XQZ)
+	if(flags & MEDIA_FLAG_DCS_URL || flags &MEDIA_FLAG_SPI_DATA 
+		|| flags & MEDIA_FLAG_DOG_DATA_MGM || flags & MEDIA_FLAG_DOG_DATA_NPG || flags & MEDIA_FLAG_DOG_DATA_XQZ
+		//|| flags & MEDIA_FLAG_URL_CHAT || flags & MEDIA_FLAG_SPEECH
+		||flags & MEDIA_FLAG_MAGIC_VOICE
+		)
 	{
 		if(bEnable)
 		{
@@ -421,6 +440,8 @@ int YTMDMPlayerListener::on_finish(int flags)
 	//// 优先处理
 	if(flags & duer::MEDIA_FLAG_BT_MODE)
 	{
+		set_status(true);
+		start_pwm_machine();
 		event_trigger(EVT_KEY_ENTER_BT);
 	}
 	else if(flags & duer::MEDIA_FLAG_WIFI_MODE)
@@ -453,14 +474,17 @@ int YTMDMPlayerListener::on_finish(int flags)
 			event_trigger(EVT_KEY_START_RECORD);
 		}
 		else if (flags & MEDIA_FLAG_SPEECH || flags & MEDIA_FLAG_DCS_URL) {	
-		#if 0	
+		#if 1	
 			YTMediaManager::instance().play_queue();
 		#else
 			YTMediaManager::instance().play_queue_v2(1);
 		#endif
 		}
 		else if(flags & MEDIA_FLAG_WCHAT) {
-			YTMediaManager::instance().play_wchat_queue();
+			int ret = YTMediaManager::instance().play_wchat_queue();
+
+			////add
+			if(ret == 0)duer::YTMediaManager::instance().play_previous_media_continue();
 		}
 		else if(flags & duer::MEDIA_FLAG_URL_CHAT){
 			event_trigger(EVT_KEY_REC_PRESS);
@@ -804,7 +828,7 @@ void YTMediaManager::play_url(const char* url, int flags)
 	if(vbat_is_shutdown())
 		return;
 	
-	if(deepbrain::is_magic_voice_mode())
+	if(!deepbrain::in_wifi_mode() && !!deepbrain::in_wechat_mode())
 		return;
 	
 	MediaManager::instance().play_url(url, flags);

@@ -18,8 +18,8 @@ namespace duer{
 #define YT_MV_FRAME_SHIFT 160
 
 
-#define USE_LJ_MAGIC 1
-#define USE_YT_MAGIC 0
+#define USE_LJ_MAGIC 0
+#define USE_YT_MAGIC 1
 
 static short pOutFrame[160];
 
@@ -130,7 +130,7 @@ void yt_voice_set_wave_head(char *wavHeader)
 int yt_voice_change_init(char *data, int size)
 {
 	DUER_LOGE("yt_voice_change_init");
-	//memory_info();
+	memory_info();
 
 	duer_recorder_amr_init_decoder(&pDecoderState);
 	
@@ -204,9 +204,10 @@ int yt_voice_change_get_data(char **data, int *size)
 	nReturn = YT_NB_AMR_DecodeFrame(pDecoderState,armnb_data,armnb_data_len,&nOffset,						   
 									pOutFrame,&nSampleNumber);
 
-
+#if 0
 	if(bExitMagicData){nSampleNumber = 0;nReturn = 0;}
-	
+#endif
+
 	if(nSampleNumber > 0) 
 	{ 
 
@@ -268,17 +269,24 @@ void yt_voice_change_free()
 		YT_NB_AMR_FreeDecoder(&pDecoderState);
 		pDecoderState = NULL;
 	}
-	//memory_info();
+	
 #elif USE_YT_MAGIC
 	if(NULL != GLOBAL_pBufferForVoiceChanger)
 	{
+		DUER_LOGE("GLOBAL_pBufferForVoiceChanger");
 		memory_free(GLOBAL_pBufferForVoiceChanger);
 		GLOBAL_pBufferForVoiceChanger = NULL;		
-	}	
+	}
+	DUER_LOGE("YT_MV_FreeChanger");
 	YT_MV_222_FreeChanger(pVoiceChanger);
 	pVoiceChanger = NULL;
 	if(pDecoderState)
+	{
+		DUER_LOGE("YT_NB_AMR_FreeDecoder");
 		YT_NB_AMR_FreeDecoder(&pDecoderState);
+	}
 #endif
+
+	memory_info();
 }
 }

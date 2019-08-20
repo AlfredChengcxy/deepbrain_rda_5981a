@@ -62,10 +62,10 @@ static duer::YTGpadcKey s_volume_up_button(KEY_B2);
 static duer::YTGpadcKey s_wifi_bt_button(KEY_B3);
 static duer::YTGpadcKey s_play_pause_button(KEY_B0);
 #elif KMT_PCBA
-static duer::YTGpadcKey s_button4(/*KEY_B5*/KEY_B0);// long (wechat)			short (play wechat)			4号键
-static duer::YTGpadcKey s_button3(/*KEY_B4*/KEY_B2);// long (action) 		short (volume ctl)    			3号键
-static duer::YTGpadcKey s_button2(/*KEY_B3*/KEY_B1);// long (model)			short (next/pause)				2号键
-static duer::YTGpadcKey s_button1(/*KEY_B0*/KEY_B3);// long (awake)			short (net)					1号键
+static duer::YTGpadcKey s_button4(/*KEY_B5*/KEY_B2);// long (wechat)short (play wechat)	---->微聊 + 音量		
+static duer::YTGpadcKey s_button3(/*KEY_B4*//*KEY_B2*/KEY_B1);// long (action)short (volume ctl)    ----->电机+ 配网
+static duer::YTGpadcKey s_button2(/*KEY_B3*//*KEY_B1*/KEY_B0);// long (model)short (next/pause)	 ----->模式+上下首/打断			
+static duer::YTGpadcKey s_button1(/*KEY_B0*/KEY_B3);// long (awake)short (net)			 ----->null	
 #elif BDW_PCBA
 static duer::YTGpadcKey s_wchat_button(KEY_B1);// 微聊
 static duer::YTGpadcKey s_magic_button(KEY_B0);// 魔音 + 打断唤醒
@@ -118,6 +118,10 @@ bool in_wifi_mode()
 	return (dcl_mode == deepbrain::DEEPBRAIN_MODE_ASR);
 }
 
+bool in_wechat_mode()
+{
+	return (dcl_mode == deepbrain::DEEPBRAIN_MODE_WECHAT);
+}
 
 bool yt_dcl_process_stop_chat(NLP_RESULT_T *nlp_result)
 {
@@ -136,6 +140,9 @@ void yt_dcl_process_result(ASR_RESULT_t *asr_result)
 {
 	int i = 0;
 	static char NO_ASR_TIMES = 0;
+
+	if(dcl_mode != DEEPBRAIN_MODE_ASR)return;
+
 	
 	switch (asr_result->error_code)
 	{
@@ -215,6 +222,9 @@ void yt_dcl_process_result(ASR_RESULT_t *asr_result)
 		NO_ASR_TIMES++;
 	}
 
+
+	if(dcl_mode != DEEPBRAIN_MODE_ASR)return;
+	
 	switch (nlp_result->type)
 	{
 		case NLP_RESULT_TYPE_NONE:
@@ -284,6 +294,9 @@ void yt_dcl_process_result(ASR_RESULT_t *asr_result)
 					}
 					DEBUG_LOGE(LOG_TAG, "after get_tts_play_url");
 					memory_info();
+
+					if(dcl_mode != DEEPBRAIN_MODE_ASR)return;
+					
 					if (ret)
 					{					
 						duer::YTMediaManager::instance().clear_queue();
@@ -600,7 +613,8 @@ void yt_dcl_rec_on_start()
 		#endif
 			break;
 			
-		case DEEPBRAIN_MODE_MAGIC_VOICE:			
+		case DEEPBRAIN_MODE_MAGIC_VOICE:	
+			DEBUG_LOGE(LOG_TAG, "yt_dcl_rec_on_start:DEEPBRAIN_MODE_MAGIC_VOICE");
 			magic_amrnb_data = (char*)memory_malloc(AMR_MAX_AUDIO_SIZE);
 			if(!magic_amrnb_data) 	
 				DEBUG_LOGE(LOG_TAG, "rec_malloc wechat_data failed!!");
@@ -704,7 +718,7 @@ void yt_dcl_rec_on_stop()
 				handler = NULL;
 			}
 		#endif
-			duer::YTMediaManager::instance().play_data(YT_WECHAT_SEND,sizeof(YT_WECHAT_SEND), duer::MEDIA_FLAG_SPEECH); 	
+			duer::YTMediaManager::instance().play_data(YT_WECHAT_SEND,sizeof(YT_WECHAT_SEND), /*duer::MEDIA_FLAG_SPEECH*/ duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS ); 	
 
 ////////////////////////add(结束后 自动恢复到asr模式)
 #if KMT_PCBA
@@ -714,7 +728,7 @@ void yt_dcl_rec_on_stop()
 			
 		case DEEPBRAIN_MODE_MAGIC_VOICE:
 			if(dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE) {
-			#if 1
+			#if 0
 				if(bExitMagicData == true) 
 				{
 					DUER_LOGE("bExitMagicData == true so exit");
@@ -821,7 +835,7 @@ void mchat_start()
 	dcl_mode = DEEPBRAIN_MODE_WECHAT;
 	
 	duer::duer_recorder_set_vad(false);
-	duer::YTMediaManager::instance().play_data(YT_MCHAT_START,sizeof(YT_MCHAT_START), duer::MEDIA_FLAG_RECORD_TONE); 
+	duer::YTMediaManager::instance().play_data(YT_MCHAT_START,sizeof(YT_MCHAT_START), duer::MEDIA_FLAG_RECORD_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS); 
 }
 
 void mchat_stop()
@@ -940,7 +954,9 @@ void mchat_play()
 	DEBUG_LOGI(LOG_TAG, "mchat_play");
 	int ret = 0;
 	ret = duer::YTMediaManager::instance().play_wchat_queue();	
-#if 0//KMT_PCBA
+
+	//////add
+#if 1//KMT_PCBA
 	if(0==ret)
 	{
 		duer::event_trigger(duer::EVT_KEY_VOLUME_PRESS);
@@ -1193,7 +1209,7 @@ void play_next()
 void set_action()
 {	
 
-#if 0
+#if 1
 	bool bEnable = duer::get_status();
 	bool bIsPlaying = duer::YTMediaManager::instance().is_playing();
 	
@@ -1256,6 +1272,19 @@ void set_action()
 
 void entry_local()
 {
+	duer::YTMediaManager::instance().stop();
+	duer::YTMediaManager::instance().stop_completely();	
+	duer::YTMediaManager::instance().clear_queue();
+
+	if(duer::duer_recorder_is_busy())
+	{
+		duer::duer_recorder_stop();
+		wait_ms(500);
+		if(duer::duer_recorder_is_busy()) {			
+			return;
+		}
+	}
+
 	spi_local_init();
 	dcl_mode = DEEPBRAIN_MODE_PLAY_LOCAL;
 	entry_new_mode(dcl_mode);
@@ -1265,6 +1294,7 @@ void exit_local()
 {
 
 }
+
 
 void entry_bt()
 {
@@ -1292,7 +1322,7 @@ void entry_bt()
 		}		
 	}
 	entry_new_mode(dcl_mode);
-
+		
 #if 0
 	duer::start_pwm_machine();
 #endif
@@ -1339,11 +1369,13 @@ void entry_magic()
 	}
 	dcl_mode = DEEPBRAIN_MODE_MAGIC_VOICE;
 	DEBUG_LOGE(LOG_TAG, "enter magic mode");		
-	memory_info();
+	//memory_info();
 	rec_mode = DEEPBRAIN_MODE_MAGIC_VOICE;
 	//yt_dcl_stop();
 	duer::duer_recorder_set_vad(true);
+#if 0	
 	bExitMagicData = false;
+#endif
 	duer::YTMediaManager::instance().stop();
 	duer::YTMediaManager::instance().stop_completely();
 	duer::YTMediaManager::instance().clear_queue();
@@ -1372,18 +1404,24 @@ void exit_magic()
 	duer::duer_recorder_reinit();
 	rec_mode = DEEPBRAIN_MODE_ASR;		
 	duer::duer_recorder_set_vad_asr(false);
+	
+#if 0	
 	if(!bExitMagicData)
 	{
 		bExitMagicData = true;
 		while(!bExitMagicDatav1){rtos::Thread::wait(10);}			
-	}		
+	}
+#endif
+
 	duer::YTMediaManager::instance().stop();
-	duer::YTMediaManager::instance().stop_completely(); 
+	//duer::YTMediaManager::instance().stop_completely(); 
+
 	while(duer::YTMediaManager::instance().is_playing())
 	{
 		DEBUG_LOGE(LOG_TAG, "is_playing");
 		rtos::Thread::wait(10);
-	}	
+	}
+
 	if(magic_amrnb_data)
 	{	DEBUG_LOGE(LOG_TAG, "memory_free magic_amrnb_data");
 		memory_free(magic_amrnb_data);
@@ -1398,6 +1436,9 @@ void exit_magic()
 	authorize_service_create(TASK_PRIORITY_1);	
 #endif
 	//yt_dcl_start(); 
+
+	duer::yt_voice_change_free();
+
 	memory_info();
 }
 
@@ -1435,10 +1476,13 @@ void switch_mode()
 	else if(dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL)
 	{
 		exit_local();
-		entry_magic();	
+		entry_magic();
+		//entry_bt();
 	}	
-	else if(dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE)
+	else if(dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE) 
 	{
+
+		//entry_bt();
 		exit_magic();
 		entry_bt();
 	}	
@@ -1655,7 +1699,10 @@ void btn2_rise_handle()
 		else
 			duer::YTMediaManager::instance().stop();
 		bPause = !bPause;
+		return;
 	}	
+	///add
+	btn1_fall_handle();
 }
 
 void btn2_long_handle()
@@ -1677,12 +1724,12 @@ void btn3_rise_handle()
 	if(dcl_mode == DEEPBRAIN_MODE_ASR || dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL ||dcl_mode ==DEEPBRAIN_MODE_BT || dcl_mode ==DEEPBRAIN_MODE_AIRKISS )
 	{
 		duer::event_trigger(duer::EVT_KEY_VOLUME_PRESS);	
-	}	
+	}
 }
 
 void btn3_long_handle()
 {	
-	DEBUG_LOGI(LOG_TAG, "btn3_long_handle");
+	DEBUG_LOGI(LOG_TAG, "btn3_long_handle");	
 	if(dcl_mode == DEEPBRAIN_MODE_ASR || dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL ||dcl_mode == DEEPBRAIN_MODE_MAGIC_VOICE ||dcl_mode ==DEEPBRAIN_MODE_BT || dcl_mode ==DEEPBRAIN_MODE_AIRKISS)
 	{	
 		duer::event_trigger(duer::EVT_KEY_ENABLE_ACTION);
@@ -1706,6 +1753,10 @@ void btn4_rise_handle()
 	{
 		// play wechat
 		duer::event_trigger(duer::EVT_KEY_MCHAT_PLAY);
+	}
+	else if(dcl_mode == DEEPBRAIN_MODE_PLAY_LOCAL)
+	{
+		duer::event_trigger(duer::EVT_KEY_VOLUME_PRESS);
 	}
 }
 
@@ -1736,14 +1787,23 @@ void entry_new_mode(int new_mode,bool need_prompt)
 			s_button1.longpress(NULL,0,-1);
 			s_button2.fall(NULL);
 			s_button2.rise(NULL);
-			s_button2.longpress(btn2_long_handle,2000,duer::YT_LONG_KEY_ONCE);
+
+			if(duer::YTMediaManager::instance().is_bt())
+				s_button2.longpress(btn2_long_handle,2000,duer::YT_LONG_KEY_ONCE);
+			else
+				s_button2.longpress(btn2_long_handle,5000,duer::YT_LONG_KEY_ONCE);
+			
+		#if 0	
 			s_button3.fall(NULL);
 			s_button3.rise(NULL);
-			//add
 			s_button3.rise(&btn3_rise_handle);
 			s_button3.longpress(NULL,0,-1);
-			//add
 			s_button3.longpress(&btn3_long_handle, 2000, duer::YT_LONG_KEY_ONCE);
+		#else
+			s_button3.fall(NULL);
+			s_button3.rise(&btn3_long_handle);
+			s_button3.longpress(NULL,0,-1);
+		#endif
 			s_button4.fall(NULL);
 			s_button4.rise(NULL);
 			s_button4.longpress(NULL,0,-1);
@@ -1758,12 +1818,17 @@ void entry_new_mode(int new_mode,bool need_prompt)
 			s_button1.longpress(NULL,0,-1);
 			s_button2.fall(NULL);
 			s_button2.rise(NULL);
-			s_button2.longpress(&btn2_long_handle, 2000, duer::YT_LONG_KEY_ONCE);		
+			s_button2.longpress(&btn2_long_handle, 2000, duer::YT_LONG_KEY_ONCE);	
+		#if 0
 			s_button3.fall(NULL);
 			s_button3.rise(NULL);
 			s_button3.longpress(NULL,0,-1);
-			//add
 			s_button3.longpress(&btn3_long_handle, 2000, duer::YT_LONG_KEY_ONCE);
+		#else
+			s_button3.fall(NULL);
+			s_button3.rise(&btn3_long_handle);
+			s_button3.longpress(NULL,0,-1);
+		#endif
 			s_button4.fall(NULL);
 			s_button4.rise(NULL);
 			s_button4.longpress(NULL,0,-1);
@@ -1772,16 +1837,20 @@ void entry_new_mode(int new_mode,bool need_prompt)
 		break;
 		case DEEPBRAIN_MODE_ASR:
 		{
-			//s_button1.fall(&btn1_fall_handle);
-			//s_button1.rise(&btn1_rise_handle);
-			s_button1.rise(&btn1_fall_handle);
-			s_button1.longpress(&btn1_long_handle, 5000, duer::YT_LONG_KEY_ONCE);
+			//s_button1.rise(&btn1_fall_handle);
+			//s_button1.longpress(&btn1_long_handle, 5000, duer::YT_LONG_KEY_ONCE);
 			s_button2.fall(&btn2_fall_handle);
 			s_button2.rise(&btn2_rise_handle);
-			s_button2.longpress(&btn2_long_handle, 2000, duer::YT_LONG_KEY_ONCE);			
+			s_button2.longpress(&btn2_long_handle, 2000, duer::YT_LONG_KEY_ONCE);	
+		#if 0	
 			s_button3.fall(&btn3_fall_handle);
 			s_button3.rise(&btn3_rise_handle);
 			s_button3.longpress(&btn3_long_handle, 2000, duer::YT_LONG_KEY_ONCE);
+		#else
+			s_button3.fall(NULL);
+			s_button3.rise(&btn3_long_handle);
+			s_button3.longpress(&btn1_long_handle, 2000, duer::YT_LONG_KEY_ONCE);
+		#endif
 			s_button4.fall(&btn4_fall_handle);
 			s_button4.rise(&btn4_rise_handle);
 			s_button4.longpress(&btn4_long_handle, 2000, duer::YT_LONG_KEY_WITH_RISE);
@@ -1798,11 +1867,17 @@ void entry_new_mode(int new_mode,bool need_prompt)
 			s_button2.fall(&btn2_fall_handle);
 			s_button2.rise(&btn2_rise_handle);
 			s_button2.longpress(&btn2_long_handle, 2000, duer::YT_LONG_KEY_ONCE);
+		#if 0	
 			s_button3.fall(&btn3_fall_handle);
 			s_button3.rise(&btn3_rise_handle);
 			s_button3.longpress(&btn3_long_handle, 2000, duer::YT_LONG_KEY_ONCE);
+		#else
+			s_button3.fall(NULL);
+			s_button3.rise(&btn3_long_handle);
+			s_button3.longpress(NULL,0,-1);
+		#endif
 			s_button4.fall(NULL);
-			s_button4.rise(NULL);
+			s_button4.rise(&btn4_rise_handle);
 			s_button4.longpress(NULL,0,-1);
 			if(need_prompt)
 				duer::YTMediaManager::instance().play_data(YT_ENTRY_LOCAL_MODE,sizeof(YT_ENTRY_LOCAL_MODE), duer::MEDIA_FLAG_LOCAL_MODE);
@@ -1861,7 +1936,7 @@ void net_connected(bool b_connect)
 		/// 进入本地模式
 		if(dcl_mode != DEEPBRAIN_MODE_BT)
 		{
-			entry_new_mode(DEEPBRAIN_MODE_PLAY_LOCAL,false);
+			entry_new_mode(DEEPBRAIN_MODE_PLAY_LOCAL,true);
 		}
 	}
 #endif	

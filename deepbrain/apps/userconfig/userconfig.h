@@ -41,7 +41,7 @@
 值得注意的是 初次烧入带boolloader的bin 的version 与ota服务器上的version不能相同
 */
 
-#define ESP32_FW_VERSION	"V1.0.1build20190730"
+#define ESP32_FW_VERSION	"V1.0.1build20190819"
 //#define ESP32_FW_VERSION	"V1.0.8build20190510"
 
 //demo鐜

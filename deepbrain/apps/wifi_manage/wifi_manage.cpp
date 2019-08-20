@@ -466,6 +466,8 @@ class AirkissEvent:public Airkiss::IOnEvent
 	virtual int on_airkiss_finish(char * strSSID,char * strPWD)
 	{
 		DEBUG_LOGI(LOG_TAG, "start_wifi_airkiss_mode success");	
+		if(strSSID == NULL)return;
+		
 		memcpy(g_wifi_manage_handle->curr_wifi.wifi_ssid,strSSID,strlen(strSSID));
 		memcpy(g_wifi_manage_handle->curr_wifi.wifi_passwd,strPWD,strlen(strPWD));
 		duer::YTMediaManager::instance().stop();
@@ -516,6 +518,7 @@ static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
 			//没有wifi信息，则获取wifi配置信息
 			if (get_wifi_info(handle) == WIFI_MANAGE_ERRNO_FAIL)
 			{
+				DEBUG_LOGE(LOG_TAG, "get_wifi_info:WIFI_MANAGE_ERRNO_FAIL");
 				set_wifi_manage_status(WIFI_MANAGE_STATUS_AIRKISS_ON);
 				break;
 			}
@@ -567,8 +570,8 @@ static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
 			duer::YTMediaManager::instance().play_data(YT_DB_WIFI_FAIL, sizeof(YT_DB_WIFI_FAIL), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);	
 		#endif
 			//audio_play_tone_mem(FLASH_MUSIC_NETWORK_CONNEC_FAILURE, TERMINATION_TYPE_NOW);	
-			//set_wifi_manage_status(WIFI_MANAGE_STATUS_STA_CONNECTING);
-			set_wifi_manage_status(WIFI_MANAGE_STATUS_AIRKISS_ON);
+			set_wifi_manage_status(WIFI_MANAGE_STATUS_STA_CONNECTING);
+			//set_wifi_manage_status(WIFI_MANAGE_STATUS_AIRKISS_ON);
 			break;
 		}
 		case WIFI_MANAGE_STATUS_STA_CONNECTED:
@@ -702,10 +705,16 @@ static void wifi_event_process(WIFI_MANAGE_HANDLE_t *handle)
 		case WIFI_MANAGE_STATUS_AIRKISS_CONNECT_FAIL:
 		{
 			duer::YTMediaManager::instance().play_data(YT_DB_WIFI_FAIL, sizeof(YT_DB_WIFI_FAIL), duer::MEDIA_FLAG_PROMPT_TONE | duer::MEDIA_FLAG_SAVE_PREVIOUS);	
+
+			bIsConnectedOnce = false;
+			rtAirkiss.stop();
+			
 			
 			//audio_play_tone_mem(FLASH_MUSIC_NETWORK_CONNECT_FAILURE, AUDIO_TERM_TYPE_NOW);
 			task_thread_sleep(2000);
-			set_wifi_manage_status(WIFI_MANAGE_STATUS_AIRKISS_ON);
+			//set_wifi_manage_status(WIFI_MANAGE_STATUS_AIRKISS_ON);
+
+			deepbrain::net_connected(false);
 			break;
 		}
     	default:
@@ -726,24 +735,29 @@ static void wifi_event_callback(
 	{
 		case APP_EVENT_WIFI_CONNECTED:
 		{
+			DEBUG_LOGE(LOG_TAG, "APP_EVENT_WIFI_CONNECTED");
 			set_wifi_manage_status(WIFI_MANAGE_STATUS_STA_CONNECT_SUCCESS);			
 			app_send_message(APP_NAME_WIFI_MANAGE, APP_MSG_TO_ALL, APP_EVENT_WIFI_CONNECTED, NULL, 0);
 			break;
 		}
 		case APP_EVENT_WIFI_CONNECT_FAIL:
 		{
+			DEBUG_LOGE(LOG_TAG, "APP_EVENT_WIFI_CONNECT_FAIL");
 			set_wifi_manage_status(WIFI_MANAGE_STATUS_STA_CONNECT_FAIL);
 			app_send_message(APP_NAME_WIFI_MANAGE, APP_MSG_TO_ALL, APP_EVENT_WIFI_CONNECT_FAIL, NULL, 0);
 			break;
 		}
 		case APP_EVENT_WIFI_DISCONNECTED:
 		{
+			DEBUG_LOGE(LOG_TAG, "APP_EVENT_WIFI_DISCONNECTED");
 			if (get_wifi_manage_status() == WIFI_MANAGE_STATUS_STA_CONNECTED)
 			{
+				DEBUG_LOGE(LOG_TAG, "WIFI_MANAGE_STATUS_STA_DISCONNECTED");
 				set_wifi_manage_status(WIFI_MANAGE_STATUS_STA_DISCONNECTED);
 			}
 			else if (get_wifi_manage_status() == WIFI_MANAGE_STATUS_STA_CONNECT_WAIT)
 			{
+				DEBUG_LOGE(LOG_TAG, "WIFI_MANAGE_STATUS_STA_CONNECT_FAIL");
 				set_wifi_manage_status(WIFI_MANAGE_STATUS_STA_CONNECT_FAIL);
 			}
 			
@@ -868,9 +882,12 @@ APP_FRAMEWORK_ERRNO_t wifi_reconn()
 	DEBUG_LOGI(TAG_LOG,"wifi_reconn");
 	int status = get_wifi_manage_status();
 	DEBUG_LOGI(TAG_LOG,"get_wifi_manage_status:%d",status);
-	if(status >= WIFI_MANAGE_STATUS_AIRKISS) return APP_FRAMEWORK_ERRNO_OK;
-	if(status == WIFI_MANAGE_STATUS_STA_CONNECTING) return APP_FRAMEWORK_ERRNO_OK;
-	
+	if(status >= WIFI_MANAGE_STATUS_AIRKISS)
+	{ 
+		if(status != WIFI_MANAGE_STATUS_AIRKISS_CONNECT_FAIL)
+		return APP_FRAMEWORK_ERRNO_OK;
+	}
+	if(status == WIFI_MANAGE_STATUS_STA_CONNECTING) return APP_FRAMEWORK_ERRNO_OK;	
 	{
 		DEBUG_LOGI(TAG_LOG,"set WIFI_MANAGE_STATUS_STA_CONNECTING");
 		set_wifi_manage_status(WIFI_MANAGE_STATUS_STA_CONNECTING);	

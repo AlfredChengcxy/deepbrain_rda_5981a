@@ -13,6 +13,16 @@
 
 #include "task_thread_interface.h"
 
+
+namespace deepbrain {
+extern bool is_magic_voice_mode();
+extern bool in_wifi_mode();
+extern bool in_wechat_mode();
+
+}
+
+
+
 namespace duer {
 
 #define USE_DYNAMIC_THREAD 0
@@ -117,6 +127,7 @@ void duer_recorder_reinit()
 #if USE_DYNAMIC_VAD
 	if(pBufferForVAD != NULL)
 	{
+		DUER_LOGE("duer_recorder_reinit:pBufferForVAD");
 		free(pBufferForVAD);
 		pBufferForVAD = NULL;
 	}
@@ -125,12 +136,14 @@ void duer_recorder_reinit()
 #if USE_DYNAMIC_AMR
 	if(pBufferForDecoder != NULL)
 	{
+		DUER_LOGE("duer_recorder_reinit:pBufferForDecoder");
 		free(pBufferForDecoder);
 		pBufferForDecoder = NULL;
 	}
 #endif
 
 #if USE_DYNAMIC_THREAD
+	DUER_LOGE("duer_recorder_reinit:duer_amr_thread&&duer_rec_thread");
 	if(duer_amr_thread)
 	{
 		task_thread_exit(duer_amr_thread);	
@@ -454,8 +467,15 @@ void duer_recorder_stop()
 	DUER_LOGI("duer_recorder_stop");
 }
 
+
+
+
+
 void duer_recorder_start()
 {		
+////add
+	if(!deepbrain::is_magic_voice_mode() && !deepbrain::in_wifi_mode() && !deepbrain::in_wechat_mode())return;
+
 	DUER_LOGI("duer_recorder_start");
 	_state = DUER_REC_STARTING;	
 	

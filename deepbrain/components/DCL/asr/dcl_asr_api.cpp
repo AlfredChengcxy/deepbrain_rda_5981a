@@ -174,7 +174,7 @@ static DCL_ERROR_CODE_t dcl_asr_write_packet(
 	http_buffer->http_request_len += size;
 
 
-	printf("http_request:\r\n%s\r\n",http_buffer->http_request);
+	//printf("http_request:\r\n%s\r\n",http_buffer->http_request);
 		
 	return DCL_ERROR_CODE_OK;
 }
@@ -395,6 +395,9 @@ DCL_ERROR_CODE_t dcl_asr_session_begin(
 		
 		return DCL_ERROR_CODE_SYS_NOT_ENOUGH_MEM;
 	}
+
+	DEBUG_LOGE(TAG_LOG, "dcl_asr_session_begin");
+	
 	memset(handler, 0, sizeof(DCL_ASR_HANDLE_t));
 	http_buffer = &handler->http_buffer;
 	asr_params = &handler->asr_params;
@@ -562,6 +565,9 @@ DCL_ERROR_CODE_t dcl_asr_session_end(
 	//free memory
 	memory_free(asr_handle);
 	asr_handle = NULL;
+
+
+	DEBUG_LOGE(TAG_LOG, "dcl_asr_session_end");
 	
 	return DCL_ERROR_CODE_OK;
 }
